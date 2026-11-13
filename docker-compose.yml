@@ -1,0 +1,112 @@
+name: failureverse-ai
+
+services:
+  demo-app:
+    build:
+      context: .
+      dockerfile: demo-app/Dockerfile
+    labels:
+      io.failureverse.project: failureverse-ai
+      io.failureverse.environment: test
+      io.failureverse.role: demo
+    ports:
+      - "127.0.0.1:5001:5001"
+    networks: [test-lab]
+    cpus: 0.5
+    mem_limit: 128m
+    pids_limit: 64
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-S", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/health', timeout=2)"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+    environment:
+      FV_ENVIRONMENT: demo
+      FV_DATABASE_URL: sqlite:////app/data/failureverse.db
+      FV_DEMO_HEALTH_URL: http://demo-app:5001/health
+      FV_ALLOWED_ORIGINS: '["http://localhost:8080","http://127.0.0.1:8080"]'
+      FV_CHECK_TIMEOUT_SECONDS: ${FV_CHECK_TIMEOUT_SECONDS:-2}
+      FV_HISTORY_LIMIT: ${FV_HISTORY_LIMIT:-120}
+      FV_OLLAMA_BASE_URL: http://host.docker.internal:11434
+      FV_OLLAMA_MODEL: ${FV_OLLAMA_MODEL:-qwen3:8b}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - backend-data:/app/data
+    networks: [control, test-lab]
+    depends_on:
+      demo-app:
+        condition: service_healthy
+    cpus: 1
+    mem_limit: 384m
+    pids_limit: 128
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-S", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/frontend.Dockerfile
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks: [control]
+    depends_on:
+      backend:
+        condition: service_healthy
+    cpus: 0.5
+    mem_limit: 128m
+    pids_limit: 64
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    profiles: [observability]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=24h"]
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks: [control]
+    cpus: 0.5
+    mem_limit: 256m
+    pids_limit: 64
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  backend-data:
+
+networks:
+  control:
+  test-lab:
+    internal: true

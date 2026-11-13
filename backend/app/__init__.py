@@ -1,0 +1,1 @@
+"""FailureVerse AI application foundation."""
