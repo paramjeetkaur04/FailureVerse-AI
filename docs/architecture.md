@@ -1,5 +1,7 @@
 # Architecture and phase boundaries
 
+Phase 2 is described in [the investigation architecture and setup guide](phase-2.md). The original Phase 1 boundary below is retained as foundation history; the Phase 2 diagnostic broker alone receives a restricted socket connection, while the web API still has no socket mount.
+
 ## Running Phase 1
 
 The React dashboard fetches typed JSON contracts from FastAPI. Vite proxies API calls during development; Nginx proxies them in the local Compose stack. The browser never contacts Docker, SQLite, or the demo service directly.

@@ -4,10 +4,13 @@
 
 A research project for the **AI for Future Workforce Agentic AI Bootcamp 2026**. Infrastructure incidents often require an engineer to gather scattered evidence, form hypotheses, compare recovery options, and verify results. FailureVerse aims to make that process observable and reproducible through specialized agents and isolated experiments.
 
-**Current scope: Phase 1 foundation.** The application runs real service health checks and saves observations. AI investigation, prediction, fault injection, and recovery are not implemented or represented as active features. No paid API is required.
+**Current scope: Phase 2 local investigation.** The application runs real health checks and a bounded Ollama-powered LangGraph investigation agent. The model selects approved Docker diagnostics and produces reports linked to collected evidence. Real tool execution is verified; factual report quality remains open because the small model still makes unsupported interpretations. Prediction, simulation, recovery execution, and multi-agent coordination remain planned. No paid API is required. See the [Phase 2 guide](docs/phase-2.md) and [actual verification report](docs/phase-2-report.md).
 
-## Implemented foundation
+## Implemented features
 
+- Genuine native tool selection through a single-agent LangGraph loop; four model calls, six diagnostic calls, and a 180-second deadline.
+- AI Investigation Center with actual provider status, progress, tool events, evidence references, cancellation, saved reports, and JSON export.
+- Separate diagnostic broker with exact container allowlisting, required test labels, sanitized outputs, and Docker HTTP method/path restrictions.
 - FastAPI with validated settings, OpenAPI documentation, SQLite via SQLAlchemy, readiness, and Prometheus request counters.
 - React, Vite, TypeScript, Tailwind CSS, Recharts, and Lucide dashboard with overview, service evidence, expandable check history, JSON export, and read-only configuration.
 - Actual SQLite query latency and Flask HTTP health-check latency. Failed measurements remain missing; no invented CPU, RAM, incident, or AI statistics.
@@ -19,6 +22,8 @@ See [Phase 1 verification report](docs/phase-1-report.md) for executed checks an
 
 The Phase 1 automated suites contain **53 tests**: 38 backend, 3 Flask demo, and 12 frontend tests. The production build, container builds, and a live frontend-to-backend-to-Flask/SQLite smoke check are part of the milestone verification. Browser layout review, the optional Prometheus profile, and execution of the workflow on GitHub are separate checks; see the report for their status.
 
+The current Phase 2 suites contain **104 tests**: 85 backend, 3 Flask demo, and 16 frontend tests. The Phase 2 report separates these automated checks from real local-model verification and outstanding browser review.
+
 ## Architecture
 
 ```mermaid
@@ -29,7 +34,7 @@ flowchart LR
   Prometheus[Optional Prometheus] -->|/metrics| API
 ```
 
-Phase 1 has no LLM calls, container-control tools, arbitrary shell endpoints, or infrastructure mutations. The future LangGraph architecture and six agent responsibilities are documented in [architecture.md](docs/architecture.md).
+Phase 2 adds local LLM calls and read-only diagnostic tools; it provides no arbitrary shell endpoints or infrastructure mutation tools. The web backend and frontend never receive the Docker socket. The future LangGraph architecture and six agent responsibilities are documented in [architecture.md](docs/architecture.md).
 
 ## Requirements
 
@@ -40,7 +45,7 @@ Phase 1 has no LLM calls, container-control tools, arbitrary shell endpoints, or
 | npm | Bundled with Node.js | Locked frontend dependencies |
 | Docker Desktop + Compose | Linux containers / WSL2 on Windows | Container builds and local demonstration |
 | Git | Any supported version | Version control |
-| Ollama | Not needed in Phase 1 | Local LLM in Phase 2 |
+| Ollama | Local tool-capable model; qwen3:0.6b selected for this host | Genuine local investigation |
 
 If missing on Windows:
 
@@ -55,6 +60,8 @@ wsl --install -d Ubuntu
 Restart the terminal after installation. Enable Docker Desktop's WSL2 engine and Linux containers. Do not install or enable anything already available.
 
 ## Run with Docker
+
+For AI investigation, first start local Ollama and pull the model using the [Phase 2 setup commands](docs/phase-2.md). Service monitoring remains available if Ollama is offline.
 
 From the repository root:
 
@@ -72,11 +79,12 @@ On Linux/macOS use `test -f .env || cp .env.example .env`. Preserve an existing 
 | Backend readiness | http://localhost:8000/api/health |
 | API documentation | http://localhost:8000/docs |
 | Flask demo health | http://localhost:5001/health |
+| Restricted diagnostic broker (Compose internal network) | http://diagnostics:8020 |
 | Optional Prometheus | http://localhost:9090 |
 
 Run another check in the dashboard to collect a second latency sample. Open **Health-check history** to inspect each observation or export JSON. Start optional metrics collection with `docker compose --profile observability up --build --wait`.
 
-Stop the local stack with `docker compose down`. This preserves the SQLite volume. Never add `--volumes` unless you intend to delete the saved observations. Local services occupy ports 5001, 8000, and 8080; stop conflicting development servers first.
+Stop the local stack with `docker compose down`. This preserves the SQLite volume. Never add `--volumes` unless you intend to delete the saved observations. Local services occupy ports 5001, 8000, 8020, and 8080; stop conflicting development servers first.
 
 ## Run without containers
 
@@ -129,7 +137,12 @@ Settings use the `FV_` prefix and are validated at startup. The backend reads th
 | `FV_ALLOWED_ORIGINS` | JSON array of local frontend origins |
 | `FV_CHECK_TIMEOUT_SECONDS` | `2`; bounded to 0.1–10 seconds |
 | `FV_HISTORY_LIMIT` | `120`; retained observation count, bounded to 10–1000 |
-| `FV_OLLAMA_MODEL` | Reserved model name; no inference in Phase 1 |
+| `FV_AI_ENABLED` | `true`; enables local investigation endpoints |
+| `FV_OLLAMA_BASE_URL` | Native development: `http://127.0.0.1:11434`; Compose uses `host.docker.internal` |
+| `FV_OLLAMA_MODEL` | `qwen3:0.6b`; installed tool-capable local model |
+| `FV_MODEL_TIMEOUT_SECONDS` | `120`; CPU inference allowance, within the 180-second overall run deadline |
+| `FV_DIAGNOSTICS_BASE_URL` | Native development: `http://127.0.0.1:8020`; Compose uses its internal broker |
+| `FV_DOCKER_GID` | Broker socket group; `0` for this Docker Desktop installation |
 | `FV_CLOUD_API_KEY` | Reserved secret; optional, unused, never exposed by the API |
 
 The Configuration screen is read-only. Edit environment values and restart the backend to apply changes. Keep `.env`, database files, runtime caches, and credentials out of Git. PostgreSQL requires migrations and driver support in a later phase; changing the URL alone is not supported.
@@ -179,15 +192,15 @@ Backend dev dependencies include Flask so the integration test makes a real HTTP
 - Local demonstration only: no authentication or multi-user authorization is implemented. Keep ports bound to loopback; do not expose the application publicly.
 - Git and Docker build exclusions cover `.env` files, private keys, credential directories, local AWS/SSH files, databases, and runtime caches. Only the empty-secret `.env.example` belongs in version control.
 - Demo containers have explicit project/test labels, resource limits, dropped capabilities, non-root users, and an internal test network. The frontend has no path to the Docker socket.
-- Phase 1 exposes no recovery, shell, failure injection, or container-control endpoint. Emergency stop and approval enforcement must be implemented and tested before any such tool is added.
+- Phase 2 exposes read-only diagnostics and no recovery, shell, failure injection, or container mutation endpoint. Emergency stop and approval enforcement must be implemented and tested before any such tool is added.
 - No production target is accepted by the health-check configuration. HTTP redirects are not followed; network proxy environment variables are ignored for demo checks.
 - Retention deletes older service observations. Future agent audit records need separate retention and integrity policies.
-- No prediction accuracy, uptime percentage, AI reasoning, or simulated recovery results are claimed in this phase.
+- Investigation reports are model-generated hypotheses tied to actual observations. Prediction accuracy, uptime percentage, and simulated recovery results are not implemented or claimed.
 
 ## Roadmap and phase gates
 
 1. **Foundation:** complete the test and review gate documented in [Phase 1 report](docs/phase-1-report.md).
-2. **First AI agent:** Ollama, validated tool selection, read-only Docker inspection of labeled test containers, structured evidence and uncertainty.
+2. **First AI agent:** implemented locally; see the Phase 2 guide and verification report for tested behavior and limits.
 3. **Multi-agent orchestration:** LangGraph state transitions, bounded retries, monitoring, investigation, simulation planning, risk analysis, and recovery planning.
 4. **Failure experiments:** isolated reversible fault scenarios, comparative recovery evaluation, approval-bound allowlisted execution, emergency stop, and verification.
 5. **Dashboard integration:** live agent events, incident workflows, approval controls, execution timeline, and incident history.
@@ -212,6 +225,6 @@ docs/                         Architecture, verification, demo and phase guidanc
 .github/workflows/            Initial test/build verification workflow
 ```
 
-Agent, tool-gateway, monitoring-agent, and simulation modules will be added when their implementation begins. Empty modules are not used to imply completed functionality.
+Phase 2 adds `backend/app/agents/`, `tools/`, and `diagnostics/`, plus durable investigation services/models. Monitoring-agent, multi-agent orchestration, and simulation modules remain planned.
 
 Design guidance acknowledgement: [unslop by Damir Sokolovsky](https://heydamir.design/unslop), CC BY 4.0. The dashboard uses the project’s own components, actual evidence, and locally bundled IBM Plex fonts.
