@@ -10,6 +10,7 @@ from app.main import create_app
 def settings(tmp_path):
     return Settings(
         _env_file=None, environment="test",
+        ai_enabled=False,
         database_url=f"sqlite:///{(tmp_path / 'checks.db').as_posix()}",
         cloud_api_key="must-never-be-returned",
     )

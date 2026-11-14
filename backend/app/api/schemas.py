@@ -30,12 +30,12 @@ class ReadinessResponse(BaseModel):
     status: Literal["healthy", "unavailable"]
     version: str
     database: Literal["connected", "unavailable"]
-    phase: int = 1
+    phase: int = 2
 
 
 class OverviewResponse(BaseModel):
     project: str = "FailureVerse AI"
-    phase: int = 1
+    phase: int = 2
     environment: str
     healthy_services: int
     total_services: int
@@ -54,4 +54,4 @@ class PublicConfig(BaseModel):
     ollama_model: str
     ai_enabled: bool = False
     docker_control_enabled: bool = False
-    phase: int = 1
+    phase: int = 2

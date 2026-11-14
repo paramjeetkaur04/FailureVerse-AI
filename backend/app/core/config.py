@@ -22,8 +22,20 @@ class Settings(BaseSettings):
     check_timeout_seconds: float = Field(default=2, ge=0.1, le=10)
     history_limit: int = Field(default=120, ge=10, le=1000)
     ollama_base_url: AnyHttpUrl = AnyHttpUrl("http://127.0.0.1:11434")
-    ollama_model: str = Field(default="qwen3:8b", min_length=1, max_length=120)
+    ollama_model: str = Field(default="qwen3:0.6b", min_length=1, max_length=120)
+    ai_enabled: bool = True
+    diagnostics_base_url: AnyHttpUrl = AnyHttpUrl("http://127.0.0.1:8020")
+    model_timeout_seconds: float = Field(default=120, ge=1, le=120)
     cloud_api_key: SecretStr = SecretStr("")
+
+    @field_validator("ollama_base_url", "diagnostics_base_url")
+    @classmethod
+    def local_ai_services(cls, value: AnyHttpUrl) -> AnyHttpUrl:
+        if value.host not in {"127.0.0.1", "localhost", "host.docker.internal", "diagnostics", "ollama"}:
+            raise ValueError("AI services must be local or designated Compose services.")
+        if value.username or value.password or value.query or value.fragment or value.path not in {"", "/"}:
+            raise ValueError("AI service URLs cannot contain credentials, paths or query data.")
+        return value
 
     @field_validator("database_url")
     @classmethod

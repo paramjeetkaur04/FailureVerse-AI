@@ -38,17 +38,20 @@ services:
       FV_CHECK_TIMEOUT_SECONDS: ${FV_CHECK_TIMEOUT_SECONDS:-2}
       FV_HISTORY_LIMIT: ${FV_HISTORY_LIMIT:-120}
       FV_OLLAMA_BASE_URL: http://host.docker.internal:11434
-      FV_OLLAMA_MODEL: ${FV_OLLAMA_MODEL:-qwen3:8b}
+      FV_OLLAMA_MODEL: ${FV_OLLAMA_MODEL:-qwen3:0.6b}
+      FV_MODEL_TIMEOUT_SECONDS: ${FV_MODEL_TIMEOUT_SECONDS:-120}
+      FV_AI_ENABLED: ${FV_AI_ENABLED:-true}
+      FV_DIAGNOSTICS_BASE_URL: http://diagnostics:8020
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
       - backend-data:/app/data
-    networks: [control, test-lab]
+    networks: [control, test-lab, diagnostics-net]
     depends_on:
       demo-app:
         condition: service_healthy
     cpus: 1
-    mem_limit: 384m
+    mem_limit: 512m
     pids_limit: 128
     read_only: true
     tmpfs: ["/tmp:size=16m,mode=1777"]
@@ -85,6 +88,33 @@ services:
       retries: 3
       start_period: 10s
 
+  diagnostics:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+    command: ["uvicorn", "app.diagnostics.main:app", "--host", "0.0.0.0", "--port", "8020", "--workers", "1"]
+    environment:
+      FV_DEMO_CONTAINER_NAME: failureverse-ai-demo-app-1
+    group_add: ["${FV_DOCKER_GID:-0}"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "127.0.0.1:8020:8020"
+    networks: [diagnostics-net]
+    cpus: 0.5
+    mem_limit: 192m
+    pids_limit: 64
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-S", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8020/health', timeout=2)"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   prometheus:
     image: prom/prometheus:v3.7.3
     profiles: [observability]
@@ -109,4 +139,6 @@ volumes:
 networks:
   control:
   test-lab:
+    internal: true
+  diagnostics-net:
     internal: true

@@ -17,8 +17,8 @@ def health(request: Request, response: Response) -> ReadinessResponse:
             connection.execute(text("SELECT 1"))
     except SQLAlchemyError:
         response.status_code = 503
-        return ReadinessResponse(status="unavailable", version="0.1.0", database="unavailable")
-    return ReadinessResponse(status="healthy", version="0.1.0", database="connected")
+        return ReadinessResponse(status="unavailable", version="0.2.0", database="unavailable")
+    return ReadinessResponse(status="healthy", version="0.2.0", database="connected")
 
 
 @router.get("/overview", response_model=OverviewResponse)
@@ -58,4 +58,5 @@ def public_config(request: Request) -> PublicConfig:
         environment=settings.environment, demo_health_url=str(settings.demo_health_url),
         check_timeout_seconds=settings.check_timeout_seconds, history_limit=settings.history_limit,
         ollama_model=settings.ollama_model,
+        ai_enabled=settings.ai_enabled,
     )

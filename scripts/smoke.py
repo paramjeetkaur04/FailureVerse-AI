@@ -65,7 +65,7 @@ def main() -> None:
     status, overview = fetch_json(args.frontend, "/api/overview")
     assert status == 200 and any(item["id"] == check["id"] for item in overview["history"])
     _, config = fetch_json(args.frontend, "/api/config")
-    assert config["ai_enabled"] is False and config["docker_control_enabled"] is False
+    assert isinstance(config["ai_enabled"], bool) and config["docker_control_enabled"] is False
     print("PASS: frontend HTML and JS/CSS assets, API proxy, live readiness, Flask HTTP health, SQLite persistence, public configuration")
 
 

@@ -1,4 +1,4 @@
-"""Phase 1 API. No Docker access, LLM invocation, or infrastructure mutations."""
+"""Local health and genuine bounded investigation; no direct Docker socket access."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -10,14 +10,18 @@ from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, g
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.routes import router
+from app.api.investigations import router as investigation_router
 from app.core.config import Settings, get_settings
 from app.core.database import Base, create_database
 from app.services.health import HealthService
+from app.services.investigations import InvestigationService
+from app.services.ollama import OllamaProvider
+from app.tools.diagnostics import DiagnosticClient
 
 logger = logging.getLogger(__name__)
 
 
-def create_app(settings: Settings | None = None, *, demo_transport=None) -> FastAPI:
+def create_app(settings: Settings | None = None, *, demo_transport=None, agent_provider=None, diagnostic_client=None) -> FastAPI:
     settings = settings or get_settings()
 
     @asynccontextmanager
@@ -26,15 +30,21 @@ def create_app(settings: Settings | None = None, *, demo_transport=None) -> Fast
         app.state.engine = engine
         Base.metadata.create_all(engine)
         app.state.health_service = HealthService(engine, settings, demo_transport)
+        app.state.investigations = InvestigationService(
+            engine, settings, agent_provider or OllamaProvider(settings),
+            diagnostic_client or DiagnosticClient(settings),
+        )
+        app.state.investigations.recover_interrupted()
         try:
             await app.state.health_service.collect("startup")
             yield
         finally:
+            await app.state.investigations.close()
             engine.dispose()
 
     app = FastAPI(
-        title="FailureVerse AI", version="0.1.0",
-        description="Phase 1: local service health, saved checks, and public configuration.",
+        title="FailureVerse AI", version="0.2.0",
+        description="Local health and genuine Ollama-powered read-only investigation through LangGraph.",
         lifespan=lifespan,
     )
     app.state.settings = settings
@@ -67,6 +77,7 @@ def create_app(settings: Settings | None = None, *, demo_transport=None) -> Fast
         return Response(generate_latest(registry), headers={"Content-Type": CONTENT_TYPE_LATEST})
 
     app.include_router(router)
+    app.include_router(investigation_router)
     return app
 
 
