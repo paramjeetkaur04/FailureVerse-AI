@@ -32,7 +32,7 @@ def create_app(settings: Settings | None = None, *, demo_transport=None, agent_p
         app.state.health_service = HealthService(engine, settings, demo_transport)
         app.state.investigations = InvestigationService(
             engine, settings, agent_provider or OllamaProvider(settings),
-            diagnostic_client or DiagnosticClient(settings),
+            diagnostic_client or DiagnosticClient(settings, health_service=app.state.health_service),
         )
         app.state.investigations.recover_interrupted()
         try:

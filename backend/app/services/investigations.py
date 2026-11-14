@@ -109,7 +109,7 @@ class InvestigationService:
                     raise ProviderError(availability["detail"])
                 agent = InvestigationAgent(self.provider, self.diagnostics, lambda event: self.event(run_id, event))
                 report = await agent.run(question)
-            self.finish(run_id, "completed", report=report)
+            self.finish(run_id, "completed" if report["outcome"] == "conclusions" else "insufficient_evidence", report=report)
         except asyncio.CancelledError:
             self.finish(run_id, "cancelled", error="Investigation cancelled. No infrastructure was modified.")
         except TimeoutError:

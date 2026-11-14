@@ -2,13 +2,14 @@
 
 import asyncio
 import json
-from datetime import timezone
+from datetime import datetime, timezone
 from time import perf_counter
 
 import httpx
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.schemas import CheckResponse, ServiceObservation
 from app.core.config import Settings
@@ -25,6 +26,27 @@ class HealthService:
         self.settings = settings
         self.transport = transport
         self._lock = asyncio.Lock()
+
+    async def investigation_snapshot(self) -> dict:
+        """Fresh fixed probes without depending on a history-write transaction."""
+        def database_probe():
+            started = perf_counter()
+            try:
+                with self.engine.connect() as connection:
+                    connection.execute(text("SELECT 1"))
+                return {"service": "database", "status": "healthy", "latency_ms": round((perf_counter()-started)*1000, 2)}
+            except SQLAlchemyError:
+                return {"service": "database", "status": "unavailable", "latency_ms": None}
+        try:
+            async with asyncio.timeout(self.settings.check_timeout_seconds):
+                database = await asyncio.to_thread(database_probe)
+        except TimeoutError:
+            database = {"service": "database", "status": "unavailable", "latency_ms": None}
+        demo = await self._demo_observation()
+        return {"measurement": "actual", "observed_at": datetime.now(timezone.utc).isoformat(), "data": {"services": [
+            {"service": "backend", "status": "healthy", "latency_ms": None}, database,
+            {"service": "demo", "status": demo.status, "latency_ms": demo.latency_ms},
+        ]}}
 
     async def collect(self, source: str) -> CheckResponse:
         if self._lock.locked():

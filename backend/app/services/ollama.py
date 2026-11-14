@@ -41,10 +41,14 @@ class OllamaProvider:
     async def status(self) -> dict:
         try:
             tags = await self._request("GET", "/api/tags")
+            if not isinstance(tags.get("models"), list):
+                raise ProviderError("Ollama returned an invalid model listing.")
             models = [model.get("name") for model in tags.get("models", []) if isinstance(model, dict)]
             if self.settings.ollama_model not in models:
                 return {"ready": False, "state": "model_missing", "detail": f"Run ollama pull {self.settings.ollama_model}.", "model": self.settings.ollama_model}
             details = await self._request("POST", "/api/show", {"model": self.settings.ollama_model})
+            if not isinstance(details.get("capabilities"), list):
+                raise ProviderError("Ollama returned invalid model capabilities.")
             capable = "tools" in details.get("capabilities", [])
             return {"ready": capable, "state": "ready" if capable else "unsupported_model", "detail": "Local model supports native tool calls." if capable else "Choose a local model supporting native tool calls.", "model": self.settings.ollama_model}
         except ProviderError as exc:
@@ -54,7 +58,7 @@ class OllamaProvider:
         body = {
             "model": self.settings.ollama_model, "messages": messages, "stream": False,
             "think": False, "keep_alive": "3m",
-            "options": {"temperature": 0, "num_ctx": 2048, "num_predict": 500 if schema else 180, "num_thread": 2},
+            "options": {"temperature": 0, "num_ctx": 2048, "num_predict": 160 if schema else 180, "num_thread": 2},
         }
         if tools:
             body["tools"] = tools
@@ -64,5 +68,7 @@ class OllamaProvider:
         message = result.get("message")
         if not isinstance(message, dict):
             raise ProviderError("Ollama returned no valid assistant message.")
+        if not isinstance(message.get("content", ""), str) or not isinstance(message.get("tool_calls", []), list):
+            raise ProviderError("Ollama returned malformed assistant content or tool calls.")
         # Never propagate or persist a model's private thinking field.
         return {"role": "assistant", "content": message.get("content", ""), "tool_calls": message.get("tool_calls", [])}

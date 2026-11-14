@@ -41,3 +41,9 @@ def test_invalid_or_oversized_model_response_fails_closed(settings, body):
 @pytest.mark.parametrize("field", ["ollama_base_url", "diagnostics_base_url"])
 def test_model_and_diagnostic_endpoints_cannot_point_to_production(field):
     with pytest.raises(ValueError): Settings(_env_file=None, **{field: "https://production.example"})
+
+
+@pytest.mark.parametrize("message", [{"content": {}}, {"content": "", "tool_calls": "bad"}, {"content": []}])
+def test_malformed_assistant_fields_fail_explicitly(settings, message):
+    provider = OllamaProvider(settings, httpx.MockTransport(lambda _: httpx.Response(200, json={"message": message})))
+    with pytest.raises(ProviderError): asyncio.run(provider.chat([]))

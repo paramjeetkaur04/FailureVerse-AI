@@ -21,12 +21,12 @@ def test_investigation_api_persists_real_graph_events_and_report(settings, trans
     with TestClient(create_app(settings, demo_transport=transport, agent_provider=ScriptedProvider(), diagnostic_client=TestDiagnostics())) as client:
         status = client.get("/api/ai/status").json()
         assert status["ready"] and status["limits"] == {"model_calls": 4, "tool_calls": 6, "deadline_seconds": 180}
-        response = client.post("/api/investigations", json={"target": "demo", "question": "Investigate actual container health"})
+        response = client.post("/api/investigations", json={"target": "demo", "question": "Investigate collected container observations"})
         assert response.status_code == 202
         result = wait_finished(client, response.json()["id"])
         assert result["status"] == "completed", result
         assert result["model_calls"] == 3 and result["tool_calls"] == 2
-        assert len(result["evidence"]) == 2 and result["report"]
+        assert len(result["evidence"]) == 3 and result["report"]["grounding_version"] == "2.1"
         assert client.get("/api/investigations").json()[0]["id"] == result["id"]
     with TestClient(create_app(settings, demo_transport=transport)) as restarted:
         assert restarted.get(f'/api/investigations/{result["id"]}').json()["report"] == result["report"]

@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 import docker
 
 from app.core.redaction import redact
+from app.agents.metrics import memory_values
 
 
 class Denied(Exception):
@@ -117,14 +118,10 @@ class DockerGateway:
                 memory = stats.get("memory_stats", {})
                 cpu = stats.get("cpu_stats", {})
                 usage, limit = memory.get("usage"), memory.get("limit")
-                valid_usage = isinstance(usage, int) and usage >= 0
-                valid_limit = isinstance(limit, int) and limit > 0
                 data = {
                     "container": "demo", "memory_usage_bytes": usage,
                     "memory_limit_bytes": limit,
-                    "memory_usage_mib": round(usage / 1048576, 2) if valid_usage else None,
-                    "memory_limit_mib": round(limit / 1048576, 2) if valid_limit else None,
-                    "memory_usage_percent": round(100 * usage / limit, 2) if valid_usage and valid_limit else None,
+                    **memory_values({"memory_usage_bytes": usage, "memory_limit_bytes": limit}),
                     "memory_note": "Actual counter snapshot; one sample cannot establish a memory leak or trend.",
                     "cpu_total_usage_ns": cpu.get("cpu_usage", {}).get("total_usage"),
                     "online_cpus": cpu.get("online_cpus"),
