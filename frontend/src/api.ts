@@ -63,8 +63,10 @@ export const api = {
 };
 
 export type Evidence = { id: string; tool: string; observed_at: string; measurement: 'actual'; data: Record<string, unknown> };
-export type Finding = { statement: string; evidence_ids: string[] };
-export type Report = { summary: string; observations: Finding[]; suspected_root_causes: Finding[]; uncertainties: string[]; recommended_actions: Finding[] };
+export type Finding = { statement: string; evidence_ids: string[]; claim_id?: string | null; source_fields?: string[] };
+export type Report = { summary: string; observations: Finding[]; suspected_root_causes: Finding[]; uncertainties: string[]; recommended_actions: Finding[];
+  grounding_version?: 'legacy' | '2.1'; outcome?: 'conclusions' | 'insufficient_evidence'; summary_evidence_ids?: string[];
+  limitations?: Finding[]; model_selection_accepted?: boolean | null; validation_notes?: string[] };
 export type Investigation = {
   id: string; target: string; question: string; model: string; status: string;
   created_at: string; finished_at: string | null; model_calls: number; tool_calls: number;

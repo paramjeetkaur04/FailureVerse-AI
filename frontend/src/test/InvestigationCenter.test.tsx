@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 import InvestigationCenter from '../components/InvestigationCenter';
@@ -63,4 +63,44 @@ it('surfaces API failure without fabricating a report', async () => {
   await user.click(screen.getByRole('button', { name: 'Start investigation' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('An investigation is already running.');
   expect(screen.queryByRole('heading', { name: 'Investigation report' })).not.toBeInTheDocument();
+});
+
+it('shows insufficient evidence and source-field citations without a success claim', async () => {
+  vi.mocked(investigationApi.list).mockResolvedValue([{ ...run, status: 'insufficient_evidence' }]);
+  vi.mocked(investigationApi.get).mockResolvedValue({ ...run, status: 'insufficient_evidence', report: { ...run.report!,
+    grounding_version: '2.1', outcome: 'insufficient_evidence', model_selection_accepted: false,
+    summary_evidence_ids: ['E1'], validation_notes: ['Model selection failed validation.'],
+    observations: [{ statement: 'Container is running.', evidence_ids: ['E1'], source_fields: ['data.running'] }],
+  } });
+  render(<InvestigationCenter />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Insufficient evidence');
+  expect(screen.getByText('Source fields: data.running')).toBeInTheDocument();
+  expect(screen.getByText('Model selection failed validation.')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Hypotheses · unconfirmed' })).toBeInTheDocument();
+  expect(screen.getAllByRole('link', { name: 'E1' })[0]).toHaveAttribute('href', '#evidence-E1');
+});
+
+it('warns that historical reports did not have factual validation', async () => {
+  vi.mocked(investigationApi.list).mockResolvedValue([run]);
+  render(<InvestigationCenter />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('predates source-field validation');
+});
+
+it('polls running progress and then renders the persisted completed report', async () => {
+  let pollDetail: (() => void) | undefined;
+  vi.spyOn(window, 'setInterval').mockImplementation((callback, delay) => {
+    if (delay === 2000 && typeof callback === 'function') pollDetail = callback as () => void;
+    return 123;
+  });
+  const running = { ...run, status: 'running', report: null, finished_at: null,
+    events: [{ sequence: 1, at: run.created_at, kind: 'state', title: 'Model selecting diagnostic tools' }] };
+  vi.mocked(investigationApi.list).mockResolvedValue([running]);
+  vi.mocked(investigationApi.get).mockResolvedValueOnce(running).mockResolvedValue(run);
+  render(<InvestigationCenter />);
+  expect(await screen.findByRole('heading', { name: 'Investigation in progress' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Investigation report' })).not.toBeInTheDocument();
+  expect(screen.getAllByText('Model selecting diagnostic tools').length).toBeGreaterThan(0);
+  act(() => pollDetail?.());
+  expect(await screen.findByText('Test report based on collected observations.')).toBeInTheDocument();
+  expect(investigationApi.get).toHaveBeenCalledTimes(2);
 });

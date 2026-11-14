@@ -5,8 +5,12 @@ import { Status, time } from './Status';
 
 const active = (status?: string) => status === 'queued' || status === 'running';
 
-function Findings({ title, items }: { title: string; items: Finding[] }) {
-  return <section className="report-section"><h3>{title}</h3>{items.length ? <ul>{items.map((item, index) => <li key={index}>{item.statement}<span className="evidence-links">{item.evidence_ids.map(id => <a href={`#evidence-${id}`} key={id}>{id}</a>)}</span></li>)}</ul> : <p>No specific causes were established by the model.</p>}</section>;
+function Citations({ ids }: { ids: string[] }) {
+  return <span className="evidence-links">{ids.map(id => <a href={`#evidence-${id}`} title={id} key={id}>{id.split('.').at(-1)}</a>)}</span>;
+}
+
+function Findings({ title, items, empty = 'No supported findings in this section.' }: { title: string; items: Finding[]; empty?: string }) {
+  return <section className="report-section"><h3>{title}</h3>{items.length ? <ul>{items.map((item, index) => <li key={index}>{item.statement}<Citations ids={item.evidence_ids} />{Boolean(item.source_fields?.length) && <small className="source-fields">Source fields: {item.source_fields!.join(', ')}</small>}</li>)}</ul> : <p>{empty}</p>}</section>;
 }
 
 export default function InvestigationCenter() {
@@ -106,9 +110,18 @@ export default function InvestigationCenter() {
 
           <section className="panel"><div className="panel-heading"><div><h2>Execution trail</h2><p>Persisted transitions, tool choices, and observed outcomes</p></div><Terminal size={18} /></div><ol className="agent-events">{run.events.map(event => <li key={event.sequence}><span className={`event-marker ${event.kind}`} /><div><span>{event.title}</span>{event.tool && <code>{event.tool}</code>}{event.selected_tools && <small>Selected: {event.selected_tools.join(', ')}</small>}<time>{time(event.at)}</time></div></li>)}</ol></section>
 
-          {run.report && <section className="panel agent-report"><div className="panel-heading"><div><h2>Investigation report</h2><p>AI-generated findings · evidence references validated</p></div><ShieldCheck size={18} /></div><p className="report-summary">{run.report.summary}</p><Findings title="Actual observations" items={run.report.observations} /><Findings title="Suspected root causes" items={run.report.suspected_root_causes} /><section className="report-section"><h3>Uncertainties and limitations</h3><ul>{run.report.uncertainties.map((item, index) => <li key={index}>{item}</li>)}</ul></section><Findings title="Recommended actions" items={run.report.recommended_actions} /><div className="report-disclaimer">Review model conclusions against the evidence. Recommendations have not been executed.</div></section>}
+          {run.report && <section className="panel agent-report"><div className="panel-heading"><div><h2>Investigation report</h2><p>{run.report.grounding_version === '2.1' ? 'Model-selected findings · source fields and quantities checked' : 'Historical model output · factual accuracy not verified'}</p></div><ShieldCheck size={18} /></div>
+            {run.report.grounding_version !== '2.1' && <div className="run-error" role="alert">This historical report predates source-field validation and may contain unsupported claims. Review the raw evidence.</div>}
+            {run.report.outcome === 'insufficient_evidence' && <div className="run-error" role="alert">Insufficient evidence for a validated model conclusion. Unvalidated selections were withheld.</div>}
+            <p className="report-summary">{run.report.summary}<Citations ids={run.report.summary_evidence_ids ?? []} /></p>
+            <Findings title={run.report.grounding_version === '2.1' ? 'Source-validated observations' : 'Historical model observations'} items={run.report.observations} />
+            <Findings title="Hypotheses · unconfirmed" items={run.report.suspected_root_causes} empty="No supported root-cause hypothesis was established." />
+            {run.report.limitations?.length ? <Findings title="Uncertainties and limitations" items={run.report.limitations} /> : <section className="report-section"><h3>Uncertainties and limitations</h3><ul>{run.report.uncertainties.map((item, index) => <li key={index}>{item}</li>)}</ul></section>}
+            <Findings title="Recommendations · not executed" items={run.report.recommended_actions} />
+            {Boolean(run.report.validation_notes?.length) && <section className="report-section"><h3>Validation details</h3><ul>{run.report.validation_notes!.map((note, index) => <li key={index}>{note}</li>)}</ul></section>}
+            <div className="report-disclaimer">Measurements are rendered by Python from collected evidence. The model selects eligible findings; hypotheses remain unconfirmed. Recommendations have not been executed.</div></section>}
 
-          {run.evidence.length > 0 && <section className="panel"><div className="panel-heading"><div><h2>Collected evidence</h2><p>Actual Docker observations · sanitized and bounded</p></div><span className="quiet-badge">{run.evidence.length} observations</span></div>{run.evidence.map(item => <details className="evidence-detail" key={item.id} id={`evidence-${item.id}`}><summary><span className="mono">{item.id}</span><span>{item.tool}</span><small>{time(item.observed_at)}</small><ArrowRight size={14} /></summary><pre>{JSON.stringify(item.data, null, 2)}</pre></details>)}</section>}
+          {run.evidence.length > 0 && <section className="panel"><div className="panel-heading"><div><h2>Collected evidence</h2><p>Diagnostic observations and coverage · sanitized and bounded</p></div><span className="quiet-badge">{run.evidence.length} observations</span></div>{run.evidence.map(item => <details className="evidence-detail" key={item.id} id={`evidence-${item.id}`}><summary><span className="mono" title={item.id}>{item.id.split('.').at(-1)}</span><span>{item.tool}</span><small>{time(item.observed_at)}</small><ArrowRight size={14} /></summary><pre>{JSON.stringify({ id: item.id, measurement: item.measurement, ...item.data }, null, 2)}</pre></details>)}</section>}
         </>}
       </div>
     </div>

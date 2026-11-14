@@ -135,7 +135,8 @@ select { background: #22272d; color: #c7cfd8; border: 1px solid #363e48; border-
 .report-section > h3 { font-size: 14px; margin-bottom: 12px; }
 .report-section ul { padding-left: 20px; margin: 0; display: grid; gap: 12px; color: var(--secondary); font-size: 13px; line-height: 22px; }
 .report-section > p { color: var(--muted); font-size: 12px; }
-.evidence-links { display: inline-flex; gap: 6px; margin-left: 8px; }
+.evidence-links { display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: 6px; margin-left: 8px; }
+.source-fields { display: block; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 10px; overflow-wrap: anywhere; }
 .evidence-links a { color: var(--accent); font-size: 11px; border: 1px solid #3a5057; border-radius: 4px; padding: 0 5px; }
 .report-disclaimer { padding: 16px 24px; background: #14181b; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 20px; }
 .evidence-detail { border-top: 1px solid var(--line); scroll-margin-top: 24px; }
