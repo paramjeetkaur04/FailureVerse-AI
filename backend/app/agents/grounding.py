@@ -17,6 +17,7 @@ class GroundingError(ValueError):
 @dataclass
 class Catalog:
     evidence: list[dict]
+    required_observations: list[str] = field(default_factory=list)
     sections: dict[str, dict[str, Finding]] = field(default_factory=lambda: {
         "observations": {}, "hypotheses": {}, "recommendations": {}, "limitations": {},
     })
@@ -28,16 +29,19 @@ class Catalog:
             claim_id=key, source_fields=list(dict.fromkeys(f"data.{name}" if name in item["data"] else "data" for name in fields)))
 
     def prompt(self):
-        return {section: [{"id": key, "statement": value.statement} for key, value in entries.items()]
-                for section, entries in self.sections.items() if section != "limitations"}
+        return {"required_observations": self.required_observations,
+                **{section: [{"id": key, "statement": value.statement} for key, value in entries.items()]
+                   for section, entries in self.sections.items() if section != "limitations"}}
 
     def schema(self):
         schema = ReportSelection.model_json_schema()
         for section in ("observations", "hypotheses", "recommendations"):
             options = list(self.sections[section])
             schema["properties"][section]["items"]["enum"] = options or ["UNAVAILABLE"]
+            schema["properties"][section]["maxItems"] = min(schema["properties"][section]["maxItems"], len(options))
             if not options:
                 schema["properties"][section]["maxItems"] = 0
+        schema["properties"]["observations"]["minItems"] = max(1, len(self.required_observations))
         return schema
 
 
@@ -102,6 +106,57 @@ def build_catalog(evidence: list[dict]) -> Catalog:
             if "service_health" not in collected:
                 catalog.add("limitations", "Fresh HTTP and database health probes were not collected in this investigation.", item, ["collected_tools"])
             catalog.add("limitations", "Disk usage was not measured; no disk utilization conclusion is supported.", item, ["unmeasured_fields"])
+    # Required source observations and failure signals must not disappear just
+    # because the small model selects the first few benign rows it sees.
+    by_id = {item["id"]: item for item in evidence}
+    facts = list(catalog.sections["observations"].values())
+    scopes = [item["data"] for item in evidence if item["tool"] == "investigation_scope"]
+    scope = scopes[-1] if scopes else {}
+    required_tools = scope.get("required_tools", [])
+    subjects = scope.get("question_subjects", [])
+    critical = []
+    seen_signals = set()
+    for fact in facts:
+        item = by_id[fact.evidence_ids[0]]
+        data, tool = item["data"], item["tool"]
+        fields = fact.source_fields
+        signal = None
+        if tool == "inspect_container" and data.get("running") is False and "data.running" in fields:
+            signal = "not_running"
+        elif tool == "inspect_container" and data.get("health_status") == "unhealthy" and "data.health_status" in fields:
+            signal = "failed_container_health"
+        elif tool == "service_health" and data.get("status") in {"unavailable", "degraded"}:
+            signal = f"failed_probe_{data.get('service')}"
+        elif tool == "container_stats" and "data.memory_limit_bytes" in fields:
+            percent = memory_values(data)["memory_usage_percent"]
+            if percent is not None and percent >= 90:
+                signal = "high_memory"
+        if signal and signal not in seen_signals:
+            seen_signals.add(signal)
+            critical.append(fact.claim_id)
+    required = list(critical)
+    for tool in sorted(required_tools):
+        candidates = [fact for fact in facts if by_id[fact.evidence_ids[0]]["tool"] == tool]
+        if tool == "inspect_container":
+            preferred = [fact for fact in candidates if "data.health_status" in fact.source_fields] or candidates
+        elif tool == "container_stats":
+            preferred = [fact for fact in candidates if "data.memory_limit_bytes" in fact.source_fields] or candidates
+        elif tool == "service_health":
+            service = "database" if "database" in subjects else "demo"
+            preferred = [fact for fact in candidates if by_id[fact.evidence_ids[0]]["data"].get("service") == service] or candidates
+        else:
+            preferred = candidates
+        if preferred and preferred[0].claim_id not in required:
+            required.append(preferred[0].claim_id)
+    order = required + [fact.claim_id for fact in facts if fact.claim_id not in required]
+    renumbered = {}
+    mapping = {}
+    for index, old_id in enumerate(order, 1):
+        key = f"F{index}"
+        mapping[old_id] = key
+        renumbered[key] = catalog.sections["observations"][old_id].model_copy(update={"claim_id": key})
+    catalog.sections["observations"] = renumbered
+    catalog.required_observations = [mapping[key] for key in required]
     return catalog
 
 
@@ -116,6 +171,8 @@ def render_report(selection: ReportSelection | None, catalog: Catalog, *, errors
             if any(key not in catalog.sections[section] for key in values):
                 raise GroundingError("A selected finding does not exist in its supported evidence category.")
             chosen[section] = [catalog.sections[section][key] for key in values]
+        if not set(catalog.required_observations).issubset(selection.observations):
+            raise GroundingError("The selection omitted required source observations: " + ", ".join(catalog.required_observations))
     else:
         chosen = {"observations": list(catalog.sections["observations"].values())[:4], "hypotheses": [],
                   "recommendations": list(catalog.sections["recommendations"].values())[:1]}
@@ -151,6 +208,8 @@ def validate_report(report: InvestigationReport, catalog: Catalog) -> None:
             if expected is None or finding != expected or not set(finding.evidence_ids).issubset(evidence_ids):
                 raise GroundingError("A claim, quantity, source field or evidence citation differs from its supported observation.")
     if report.outcome == "conclusions":
+        if not set(catalog.required_observations).issubset(item.claim_id for item in report.observations):
+            raise GroundingError("A required observation or observed failure was omitted.")
         if not report.observations or not report.recommended_actions:
             raise GroundingError("A validated conclusion requires supported observations and a recommendation.")
         expected_summary = " ".join(item.statement for item in report.observations[:2])

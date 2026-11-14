@@ -33,7 +33,8 @@ class ScriptedScenarioProvider:
         chosen = [row["id"] for row in catalog["observations"] if self.scenario.expected_conclusion in row["statement"].lower()]
         if not chosen:
             raise AssertionError("Controlled scenario lacks its expected supported observation.")
-        return {"role": "assistant", "content": json.dumps({"observations": chosen[:2],
+        chosen = list(dict.fromkeys([*catalog.get("required_observations", []), *chosen]))
+        return {"role": "assistant", "content": json.dumps({"observations": chosen[:6],
             "hypotheses": [row["id"] for row in catalog["hypotheses"]][:1],
             "recommendations": [row["id"] for row in catalog["recommendations"]][:1]})}
 

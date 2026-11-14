@@ -113,3 +113,25 @@ def test_database_probe_failure_is_explicit_and_does_not_expose_connection_detai
     evidence = asyncio.run(service.investigation_snapshot())
     assert evidence["data"]["services"][1]["status"] == "unavailable"
     assert "secret-database-location" not in str(evidence)
+
+
+def test_required_observations_cannot_be_replaced_by_benign_facts():
+    evidence = snapshot()
+    evidence.append({"id": "run.scope", "tool": "investigation_scope", "data": {
+        "required_tools": ["container_stats"], "collected_tools": ["container_stats", "container_logs"],
+        "unmeasured_fields": ["disk_usage"],
+    }})
+    catalog = build_catalog(evidence)
+    required = catalog.required_observations
+    assert required == ["F1"]
+    assert "50.00%" in catalog.sections["observations"]["F1"].statement
+    with pytest.raises(GroundingError, match="omitted required"):
+        render_report(ReportSelection(observations=["F2"], hypotheses=[], recommendations=["R1"]), catalog)
+
+
+def test_observed_failure_is_required_even_when_model_selects_another_supported_fact():
+    evidence = snapshot()
+    evidence[0]["data"]["memory_usage_bytes"] = 125*1048576
+    catalog = build_catalog(evidence)
+    assert catalog.required_observations == ["F1"]
+    assert "97.66%" in catalog.sections["observations"]["F1"].statement

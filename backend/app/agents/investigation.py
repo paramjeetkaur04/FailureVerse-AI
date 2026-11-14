@@ -211,16 +211,17 @@ class InvestigationAgent:
             observed_at=datetime.now(timezone.utc).isoformat(),
             measurement="simulated" if evidence and all(item["measurement"] == "simulated" for item in evidence) else "actual",
             data={"collected_tools": collected_tools, "attempted_tools": self.attempted_tools, "required_tools": sorted(self.required_tools),
+                  "question_subjects": [word for word in ("database", "memory", "cpu", "disk") if word in state["messages"][1]["content"].lower()],
                   "unmeasured_fields": ["disk_usage", "cpu_utilization", "resource_trends"]}).model_dump()
         evidence.append(scope)
         self.event("observation", "Investigation coverage recorded", evidence=scope)
         catalog = build_catalog(evidence)
-        if not self.has_coverage(state["evidence"]) or self.unavailable_scope or not catalog.sections["observations"] or not catalog.sections["recommendations"]:
+        if not self.has_coverage(state["evidence"]) or self.unavailable_scope or len(catalog.required_observations) > 6 or not catalog.sections["observations"] or not catalog.sections["recommendations"]:
             missing = sorted(self.required_tools - set(collected_tools)) + self.unavailable_scope
             result = render_report(None, catalog, errors=[f"Insufficient diagnostic coverage: {', '.join(missing) or 'two distinct successful tools required'}. No model conclusion was substituted."])
             self.event("report", "Insufficient evidence; only source-validated observations are shown")
             return {"report": result}
-        messages = [{"role": "system", "content": "Select relevant supported finding IDs for this investigation. Return only the JSON selection schema. observations contains F IDs, hypotheses contains H IDs (or []), recommendations contains R IDs. Use only IDs present in their matching catalog category. No new text, numbers, causes or IDs. Choose up to two useful facts and one recommendation. Hypotheses are tentative, never confirmed causes. /no_think"},
+        messages = [{"role": "system", "content": "Select relevant supported finding IDs for this investigation. Return only the JSON selection schema. observations contains F IDs, hypotheses contains H IDs (or []), recommendations contains R IDs. Include EVERY ID in required_observations; these are required source observations or observed failures. Use only IDs in their matching catalog category. No new text, numbers, causes or IDs. Hypotheses are tentative, never confirmed causes. /no_think"},
                     {"role": "user", "content": json.dumps({"question": state["messages"][1]["content"], "catalog": catalog.prompt()})}]
         errors = []
         for attempt in range(2):
@@ -236,7 +237,7 @@ class InvestigationAgent:
                 self.event("error", f"Report validation failed: {detail}")
                 if attempt or self.budget.model_calls >= MAX_MODEL_CALLS:
                     break
-                messages.append({"role": "user", "content": "Correct the selection using only the listed F, H and R IDs. Do not write statements or measurements. Use [] for hypotheses when none exist."})
+                messages.append({"role": "user", "content": f"{detail} Include required observations {catalog.required_observations}. Use only listed F, H and R IDs. Do not write statements or measurements. Use [] for hypotheses when none exist."})
         result = render_report(None, catalog, errors=errors)
         self.event("report", "Insufficient evidence for a validated model selection; generated claims withheld")
         return {"report": result}

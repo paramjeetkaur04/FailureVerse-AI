@@ -45,7 +45,7 @@ class InvestigationReport(StrictModel):
 
 class ReportSelection(StrictModel):
     """Only references are model-generated; arbitrary factual text/numbers are prohibited."""
-    observations: list[str] = Field(min_length=1, max_length=4)
+    observations: list[str] = Field(min_length=1, max_length=6)
     hypotheses: list[str] = Field(max_length=2)
     recommendations: list[str] = Field(min_length=1, max_length=2)
 

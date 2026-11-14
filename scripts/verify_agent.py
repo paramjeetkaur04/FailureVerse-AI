@@ -42,7 +42,7 @@ def main() -> None:
     assert run["report"] and any(event["kind"] == "decision" for event in run["events"])
     assert run["report"]["grounding_version"] == "2.1" and run["report"]["model_selection_accepted"]
     validate_report(InvestigationReport.model_validate(run["report"]), build_catalog(run["evidence"]))
-    print(json.dumps({"result": "PASS", "run_id": run["id"], "model": run["model"], "model_calls": run["model_calls"], "tool_calls": run["tool_calls"], "tools": [e["tool"] for e in run["evidence"]], "elapsed_seconds": run["verification_elapsed_seconds"], "artifact": str(destination)}, indent=2))
+    print(json.dumps({"result": "PASS", "run_id": run["id"], "model": run["model"], "model_calls": run["model_calls"], "tool_calls": run["tool_calls"], "tools": [event["tool"] for event in run["events"] if event["kind"] == "tool_call"], "observations": len([item for item in run["evidence"] if item["tool"] != "investigation_scope"]), "elapsed_seconds": run["verification_elapsed_seconds"], "artifact": str(destination)}, indent=2))
 
 
 if __name__ == "__main__":
