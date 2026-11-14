@@ -61,3 +61,27 @@ export const api = {
   config: () => request<Config>('/config'),
   runCheck: () => request<Check>('/checks', { method: 'POST', body: JSON.stringify({ source: 'manual' }) }),
 };
+
+export type Evidence = { id: string; tool: string; observed_at: string; measurement: 'actual'; data: Record<string, unknown> };
+export type Finding = { statement: string; evidence_ids: string[] };
+export type Report = { summary: string; observations: Finding[]; suspected_root_causes: Finding[]; uncertainties: string[]; recommended_actions: Finding[] };
+export type Investigation = {
+  id: string; target: string; question: string; model: string; status: string;
+  created_at: string; finished_at: string | null; model_calls: number; tool_calls: number;
+  report: Report | null; error: string | null; evidence: Evidence[];
+  events: { sequence: number; at: string; kind: string; title: string; tool?: string; selected_tools?: string[]; duration_ms?: number }[];
+  limits: { model_calls: number; tool_calls: number; deadline_seconds: number };
+};
+export type RunSummary = Pick<Investigation, 'id' | 'question' | 'status' | 'model' | 'created_at' | 'model_calls' | 'tool_calls'>;
+export type AgentStatus = {
+  ready: boolean; enabled: boolean; state: string; detail: string; model: string;
+  active_run_id: string | null; limits: Investigation['limits'];
+  targets: { id: string; name: string }[];
+};
+export const investigationApi = {
+  status: () => request<AgentStatus>('/ai/status'),
+  list: () => request<RunSummary[]>('/investigations'),
+  get: (id: string) => request<Investigation>(`/investigations/${encodeURIComponent(id)}`),
+  start: (question: string) => request<Investigation>('/investigations', { method: 'POST', body: JSON.stringify({ target: 'demo', question }) }),
+  cancel: (id: string) => request<Investigation>(`/investigations/${encodeURIComponent(id)}/cancel`, { method: 'POST' }),
+};

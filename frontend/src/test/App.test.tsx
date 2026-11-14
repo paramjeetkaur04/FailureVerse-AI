@@ -34,7 +34,7 @@ describe('connected workspace', () => {
     await act(async () => { await vi.dynamicImportSettled(); });
     expect(screen.queryByText('Waiting for measurements')).not.toBeInTheDocument();
     expect(await screen.findByText('One observation collected')).toBeInTheDocument();
-    expect(screen.getByText('Agent control center').closest('div')).toHaveAttribute('title', expect.stringContaining('Phase 2'));
+    expect(screen.getByRole('button', { name: 'AI Investigation Center' })).toBeInTheDocument();
   });
 
   it('runs a backend check and refreshes saved observations', async () => {
