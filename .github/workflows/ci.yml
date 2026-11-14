@@ -7,6 +7,21 @@ permissions:
   contents: read
 
 jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install ruff==0.14.5
+      - name: Basic Python lint
+        run: python -m ruff check --select E9,F63,F7,F82 backend demo-app scripts
+      - name: Credential files and literal secrets
+        run: python scripts/check_secrets.py --history --self-test
+
   python:
     runs-on: ubuntu-latest
     steps:
@@ -23,6 +38,8 @@ jobs:
         working-directory: backend
       - run: python -m pytest -q
         working-directory: demo-app
+      - name: Controlled evaluation (simulated tools and scripted model)
+        run: python scripts/evaluate_agent.py --output artifacts/evaluation-scripted.json
 
   frontend:
     runs-on: ubuntu-latest
