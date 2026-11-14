@@ -17,11 +17,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--frontend", default="http://127.0.0.1:8080")
     parser.add_argument("--output", default="artifacts/phase21/real-investigation.json")
+    parser.add_argument("--question", default="Investigate the demo container's actual health. Choose relevant tools, compare their observations, and report suspected issues or the limitations of a healthy snapshot.")
     args = parser.parse_args()
     _, status = fetch_json(args.frontend, "/api/ai/status")
     assert status["ready"], status
     _, created = fetch_json(args.frontend, "/api/investigations", {
-        "target": "demo", "question": "Investigate the demo container's actual health. Choose relevant tools, compare their observations, and report suspected issues or the limitations of a healthy snapshot.",
+        "target": "demo", "question": args.question,
     })
     started = time.monotonic()
     while time.monotonic()-started < 195:
