@@ -62,7 +62,7 @@ export const api = {
   runCheck: () => request<Check>('/checks', { method: 'POST', body: JSON.stringify({ source: 'manual' }) }),
 };
 
-export type Evidence = { id: string; tool: string; observed_at: string; measurement: 'actual'; data: Record<string, unknown> };
+export type Evidence = { id: string; tool: string; observed_at: string; measurement: 'actual' | 'simulated'; data: Record<string, unknown> };
 export type Finding = { statement: string; evidence_ids: string[]; claim_id?: string | null; source_fields?: string[] };
 export type Report = { summary: string; observations: Finding[]; suspected_root_causes: Finding[]; uncertainties: string[]; recommended_actions: Finding[];
   grounding_version?: 'legacy' | '2.1'; outcome?: 'conclusions' | 'insufficient_evidence'; summary_evidence_ids?: string[];

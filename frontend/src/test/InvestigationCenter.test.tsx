@@ -87,20 +87,19 @@ it('warns that historical reports did not have factual validation', async () => 
 });
 
 it('polls running progress and then renders the persisted completed report', async () => {
-  let pollDetail: (() => void) | undefined;
-  vi.spyOn(window, 'setInterval').mockImplementation((callback, delay) => {
-    if (delay === 2000 && typeof callback === 'function') pollDetail = callback as () => void;
-    return 123;
-  });
-  const running = { ...run, status: 'running', report: null, finished_at: null,
-    events: [{ sequence: 1, at: run.created_at, kind: 'state', title: 'Model selecting diagnostic tools' }] };
-  vi.mocked(investigationApi.list).mockResolvedValue([running]);
-  vi.mocked(investigationApi.get).mockResolvedValueOnce(running).mockResolvedValue(run);
-  render(<InvestigationCenter />);
-  expect(await screen.findByRole('heading', { name: 'Investigation in progress' })).toBeInTheDocument();
-  expect(screen.queryByRole('heading', { name: 'Investigation report' })).not.toBeInTheDocument();
-  expect(screen.getAllByText('Model selecting diagnostic tools').length).toBeGreaterThan(0);
-  act(() => pollDetail?.());
-  expect(await screen.findByText('Test report based on collected observations.')).toBeInTheDocument();
-  expect(investigationApi.get).toHaveBeenCalledTimes(2);
+  vi.useFakeTimers();
+  try {
+    const running = { ...run, status: 'running', report: null, finished_at: null,
+      events: [{ sequence: 1, at: run.created_at, kind: 'state', title: 'Model selecting diagnostic tools' }] };
+    vi.mocked(investigationApi.list).mockResolvedValue([running]);
+    vi.mocked(investigationApi.get).mockResolvedValueOnce(running).mockResolvedValue(run);
+    render(<InvestigationCenter />);
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByRole('heading', { name: 'Investigation in progress' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Investigation report' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Model selecting diagnostic tools').length).toBeGreaterThan(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(screen.getByText('Test report based on collected observations.')).toBeInTheDocument();
+    expect(investigationApi.get).toHaveBeenCalledTimes(2);
+  } finally { vi.useRealTimers(); }
 });
