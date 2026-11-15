@@ -4,11 +4,14 @@
 
 A research project for the **AI for Future Workforce Agentic AI Bootcamp 2026**. Infrastructure incidents often require an engineer to gather scattered evidence, form hypotheses, compare recovery options, and verify results. FailureVerse aims to make that process observable and reproducible through specialized agents and isolated experiments.
 
-**Current scope: Phase 2 local investigation.** The application runs real health checks and a bounded Ollama-powered LangGraph investigation agent. The model selects approved Docker diagnostics and produces reports linked to collected evidence. Real tool execution is verified; factual report quality remains open because the small model still makes unsupported interpretations. Prediction, simulation, recovery execution, and multi-agent coordination remain planned. No paid API is required. See the [Phase 2 guide](docs/phase-2.md) and [actual verification report](docs/phase-2-report.md).
+**Current scope: Phase 2.1 investigation reliability.** A bounded Ollama-powered LangGraph agent selects approved diagnostics and supported finding IDs. Python calculates quantities, binds every reported finding to source fields and evidence IDs, and withholds unsupported selections. Facts, tentative hypotheses, recommendations and missing evidence are separate. This is a single-agent local demonstration; prediction, live failure experiments, recovery execution and multi-agent coordination remain planned. No paid API is required. See the [investigation guide](docs/phase-2.md), [verification history](docs/phase-2-report.md), and [Phase 2.1 report](docs/phase-2-1-report.md).
 
 ## Implemented features
 
 - Genuine native tool selection through a single-agent LangGraph loop; four model calls, six diagnostic calls, and a 180-second deadline.
+- Source-field validated reports: model-selected finding IDs, deterministic memory conversions/percentages, exact citations, conditional hypotheses, and explicit insufficient-evidence outcomes. The model cannot supply arbitrary factual sentences or measurements.
+- Fresh fixed HTTP and SQLite query probes with distinct evidence IDs, plus Docker state, bounded logs and actual counters. Unmeasured disk utilization and CPU utilization remain unavailable.
+- Five controlled evaluation scenarios with separate scripted-model and real-Ollama modes. Tool observations in those scenarios are explicitly simulated; live Docker verification is separate.
 - AI Investigation Center with actual provider status, progress, tool events, evidence references, cancellation, saved reports, and JSON export.
 - Separate diagnostic broker with exact container allowlisting, required test labels, sanitized outputs, and Docker HTTP method/path restrictions.
 - FastAPI with validated settings, OpenAPI documentation, SQLite via SQLAlchemy, readiness, and Prometheus request counters.
@@ -22,19 +25,35 @@ See [Phase 1 verification report](docs/phase-1-report.md) for executed checks an
 
 The Phase 1 automated suites contain **53 tests**: 38 backend, 3 Flask demo, and 12 frontend tests. The production build, container builds, and a live frontend-to-backend-to-Flask/SQLite smoke check are part of the milestone verification. Browser layout review, the optional Prometheus profile, and execution of the workflow on GitHub are separate checks; see the report for their status.
 
-The current Phase 2 suites contain **104 tests**: 85 backend, 3 Flask demo, and 16 frontend tests. The Phase 2 report separates these automated checks from real local-model verification and outstanding browser review.
+The original Phase 2 suites contained **104 tests**. Phase 2.1 currently has **150 tests**: 128 backend, 3 Flask demo, and 19 frontend tests. Basic Ruff lint, source-secret checks, the production build and controlled evaluations run separately. Browser automation is unavailable on this host; use the [manual verification checklist](docs/browser-verification.md). See [testing.md](docs/testing.md) for commands and metric definitions.
+
+## Technology stack
+
+| Layer | Implementation |
+| --- | --- |
+| Dashboard | React, Vite, TypeScript, Tailwind CSS, Recharts, Lucide, bundled IBM Plex fonts |
+| API and persistence | FastAPI, Pydantic, SQLAlchemy, SQLite |
+| Investigation | LangGraph, local Ollama native tool calling, Python source-field validation |
+| Diagnostics | Restricted Docker SDK broker, fixed HTTP and SELECT 1 probes |
+| Verification | Pytest, Vitest, React Testing Library, Ruff, source-secret checks, GitHub Actions |
+| Local environment | Docker Compose, resource-limited test containers, optional Prometheus |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
   Browser[React dashboard] -->|same-origin /api| API[FastAPI]
-  API --> DB[(SQLite observation history)]
+  API --> DB[(SQLite checks and investigations)]
   API -->|bounded GET /health| Flask[Designated Flask demo]
+  API --> Graph[Bounded LangGraph agent]
+  Graph -->|native calls and finding-ID selection| Ollama[Local Ollama]
+  Graph --> Broker[Restricted read-only diagnostic broker]
+  Broker --> Docker[Exact allowlisted Docker test container]
+  Graph --> Validation[Python source-field and quantity validation]
   Prometheus[Optional Prometheus] -->|/metrics| API
 ```
 
-Phase 2 adds local LLM calls and read-only diagnostic tools; it provides no arbitrary shell endpoints or infrastructure mutation tools. The web backend and frontend never receive the Docker socket. The future LangGraph architecture and six agent responsibilities are documented in [architecture.md](docs/architecture.md).
+The web backend and frontend never receive the Docker socket. The separate broker verifies container identity and all test labels on every read. There are no arbitrary shell or mutation tools. The model remains responsible for native diagnostic calls and choosing eligible findings; deterministic rendering of measurements is not a mock AI response. The future multi-agent architecture is documented in [architecture.md](docs/architecture.md).
 
 ## Requirements
 
@@ -78,7 +97,7 @@ On Linux/macOS use `test -f .env || cp .env.example .env`. Preserve an existing 
 | Dashboard | http://localhost:8080 |
 | Backend readiness | http://localhost:8000/api/health |
 | API documentation | http://localhost:8000/docs |
-| Flask demo health | http://localhost:5001/health |
+| Flask demo health (Compose internal network) | http://demo-app:5001/health |
 | Restricted diagnostic broker (Compose internal network) | http://diagnostics:8020 |
 | Optional Prometheus | http://localhost:9090 |
 
@@ -180,6 +199,17 @@ npm.cmd run build
 # From repository root; requires running services
 & ./.venv/Scripts/python.exe scripts/smoke.py --frontend http://127.0.0.1:5173
 
+# Source and numerical regression checks; from root
+& ./.venv/Scripts/python.exe -m ruff check --select E9,F63,F7,F82 backend demo-app scripts
+& ./.venv/Scripts/python.exe scripts/check_secrets.py --history --self-test
+& ./.venv/Scripts/python.exe scripts/evaluate_agent.py
+
+# Actual Ollama inference with controlled SIMULATED tool observations
+& ./.venv/Scripts/python.exe scripts/evaluate_agent.py --ollama --output artifacts/phase21/evaluation-ollama.json
+
+# Actual deployed Ollama-to-Docker investigation
+& ./.venv/Scripts/python.exe scripts/verify_agent.py
+
 # Validate container configuration and build images without starting services
 docker compose config --quiet
 docker compose build
@@ -195,7 +225,9 @@ Backend dev dependencies include Flask so the integration test makes a real HTTP
 - Phase 2 exposes read-only diagnostics and no recovery, shell, failure injection, or container mutation endpoint. Emergency stop and approval enforcement must be implemented and tested before any such tool is added.
 - No production target is accepted by the health-check configuration. HTTP redirects are not followed; network proxy environment variables are ignored for demo checks.
 - Retention deletes older service observations. Future agent audit records need separate retention and integrity policies.
-- Investigation reports are model-generated hypotheses tied to actual observations. Prediction accuracy, uptime percentage, and simulated recovery results are not implemented or claimed.
+- The finding vocabulary is deliberately bounded. Deterministic source binding prevents arbitrary generated measurements; it does not validate unrestricted causal reasoning, tool usefulness, underlying instrumentation, or future reliability. Eligible hypotheses remain unconfirmed.
+- CPU utilization needs interval samples and disk usage is not collected. These values are withheld, not set to zero. A full outage of the persistent SQLite store can prevent durable investigations and remains an explicit storage/API error.
+- Historical Phase 2 reports remain preserved with an unverified-output warning. New source-field validation is not retroactively claimed for them.
 
 ## Roadmap and phase gates
 
@@ -206,7 +238,7 @@ Backend dev dependencies include Flask so the integration test makes a real HTTP
 5. **Dashboard integration:** live agent events, incident workflows, approval controls, execution timeline, and incident history.
 6. **Evaluation and deployment:** broader integration/safety tests, CI/CD, approved deployment, demo recording, screenshots, presentation, and bootcamp evaluation evidence.
 
-Do not advance phases until the preceding implementation is tested and reviewed. Ask before committing, pushing, or deploying. No paid provider is needed for the local MVP.
+Do not advance phases until the preceding implementation is tested and reviewed. Phase 3 has not started. Routine logical Conventional Commits and pushes are authorized for this project after staged review, secret checks and relevant tests. Destructive Git operations, existing repository visibility changes and deployment still require confirmation. No automatic deployment is configured. See [version-control.md](docs/version-control.md).
 
 ## Project layout
 

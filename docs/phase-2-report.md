@@ -1,5 +1,11 @@
 # Phase 2 verification report
 
+## Phase 2.1 addendum
+
+The original Phase 2 findings below are preserved as historical evidence. Phase 2.1 replaces free-form factual generation with model-selected finding IDs and deterministic source-field rendering, adds fixed service probes and explicit insufficient-evidence results, and validates required observations so a report cannot omit the main finding. See [phase-2-1-report.md](phase-2-1-report.md) for the final tests, live run, real-model controlled evaluation, browser limitation and milestone recommendation. Original inaccurate reports were not edited or retroactively marked accurate. Phase 3 has not started.
+
+## Original Phase 2 verification
+
 Verification date: **14 November 2026**. Scope: one genuine local Ollama investigation agent using LangGraph, restricted Docker diagnostics, durable SQLite records, and the React Investigation Center. Multi-agent coordination, fault injection, recovery execution, and deployment remain outside this phase.
 
 **Status: the real model/tool integration is verified; factual report quality and browser review remain open. Do not treat this as an accuracy sign-off or advance to Phase 3 yet.**
@@ -42,7 +48,7 @@ The final run passed the execution checks against real services:
 
 The actual statistics recorded **60,968,960 bytes / 58.14 MiB** of memory, a **128 MiB** limit, and **45.43%** memory usage. CPU utilization remained unavailable; only the actual cumulative CPU counter and CPU count were recorded. Timestamped application logs were collected as a separate bounded observation. The saved record includes model tool selections, actual results, state transitions, counters, final report, and limits. No test provider or scripted Docker transport participates in this command-line demonstration.
 
-Local evidence: [latest complete record](../artifacts/phase2/real-investigation.json), [run-specific preserved record](../artifacts/phase2/investigation-04646e06-1107-4c78-8386-0f3242733f04.json). These files are intentionally ignored by Git. `scripts/verify_agent.py` preserves each subsequent run separately as well.
+Local-only evidence paths: `artifacts/phase2/real-investigation.json` and `artifacts/phase2/investigation-04646e06-1107-4c78-8386-0f3242733f04.json`. These generated records are intentionally ignored by Git and are not public repository links. `scripts/verify_agent.py` preserves subsequent runs separately as well.
 
 **Manual factual review did not pass.** The final report correctly repeated the memory percentage and limit, but still described CPU usage as "stable," introduced an unsupported `8292ms` value, and asserted absence of leaks/suspicious activity. Its actual CPU counter was `829232997000` nanoseconds; a single sample and clipped logs cannot support those conclusions. Some CPU statements cite log evidence, illustrating that a valid evidence ID does not establish semantic relevance. The limited quantity checks reject the reproduced percentage/memory-conversion errors; they do not validate arbitrary units, trends, absence claims, or general natural-language interpretation. The completed state records successful execution and bounded validation, not verified diagnostic truth. Original generated outputs are preserved unchanged.
 
