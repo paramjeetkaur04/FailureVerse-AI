@@ -2,7 +2,7 @@
 
 Date: **14 November 2026**. Phase 3 has not started. The existing FastAPI/SQLite, LangGraph, Ollama, restricted broker and React architecture is retained.
 
-**Technical result:** source-grounded reporting, required observations and bounded failure handling pass the local checks, two real Ollama-to-Docker investigations, and all five controlled scenarios with real Ollama inference. **Final milestone approval remains conditional on real-browser review and remote GitHub CI/publication, which are not verified.**
+**Technical result:** source-grounded reporting, required observations and bounded failure handling pass the local checks, two real Ollama-to-Docker investigations, and all five controlled scenarios with real Ollama inference. **Final milestone approval requires real-browser review and passing remote CI for the reviewed commit.** The public repository was created and verified on 15 November 2026 (local time); consult its live Actions result for the exact SHA.
 
 ## What changed
 
@@ -27,7 +27,7 @@ Hypotheses are explicitly tentative and eligible only when their supporting fail
 | Final Compose readiness | Backend, frontend, broker and demo healthy |
 | Live HTTP smoke check | Passed: real assets, reverse proxy, readiness, Flask HTTP and SQLite persistence |
 | Real browser | **Not executed**: browser/native automation hosts unavailable |
-| Remote CI | **Not executed**: GitHub authentication/publication pending |
+| Remote CI | [GitHub Actions](https://github.com/PARAMCLOUD1/FailureVerse-AI/actions/workflows/ci.yml); verify the reviewed SHA separately from local results |
 
 The initial eight old-contract regression failures were corrected while preserving budget, policy and no-fabrication coverage. A disk-scope test found an unnecessary resource-tool requirement; it was fixed. The final build also caught a Node/DOM timer overload mismatch in the new progress test; the test now uses Vitest's fake clock and the full frontend suite/build passed again. No failing final check is being counted as a pass.
 
@@ -81,7 +81,7 @@ Browser inventory returned no app/browser and reported `Computer Use native pipe
 
 Phase 1 commit `94dd605` and all history were preserved. The original branch was renamed from `master` to `main`. Verified Phase 2 work was split into backend, dashboard and documentation commits; Phase 2.1 work uses a feature branch and logical Conventional Commits. Staged reviews, relevant checks and secret scans precede commits. No credentials, local models, virtual environments, caches, generated builds, databases, logs or evaluation JSON were staged.
 
-The requested public target is `https://github.com/PARAMCLOUD1/FailureVerse-AI`. The last GitHub CLI checks reported no authenticated account; unauthenticated repository checks returned 404. Creation, public accessibility, pushes and remote CI are **not confirmed**. See [version-control.md](version-control.md) for the login handoff and authorized workflow. No production deployment was configured or performed.
+The public repository is `https://github.com/PARAMCLOUD1/FailureVerse-AI`, created and verified on 15 November 2026 (local time). Git's existing credential helper verified the requested account, so a separate CLI login was unnecessary. The tested feature branch was fast-forwarded into `main`; no shared history was rewritten. See repository commit history and Actions for publication/CI state, and [version-control.md](version-control.md) for the authorized workflow. No production deployment was configured or performed.
 
 ## Files changed for Phase 2.1
 
@@ -95,6 +95,6 @@ The requested public target is `https://github.com/PARAMCLOUD1/FailureVerse-AI`.
 
 ## Recommendation and remaining limits
 
-**Ready for technical review of the bounded Phase 2.1 investigation milestone; hold final Phase 2 milestone approval until manual browser review and authenticated GitHub/CI verification finish. Do not begin Phase 3.**
+**Ready for technical review of the bounded Phase 2.1 investigation milestone. Require manual browser review and a passing Actions run for the reviewed commit before final Phase 2 milestone approval. Do not begin Phase 3.**
 
 The finding vocabulary and keyword-based coverage policy are deliberately limited. They do not establish arbitrary log interpretation, novel causal diagnosis, prediction accuracy, recovery effectiveness or instrumentation correctness. The local model can repeat diagnostics and choose redundant findings, but attempts remain bounded. Missing CPU interval/disk data stay unavailable. A full outage of the persistent SQLite store can prevent durable investigations and must remain an explicit storage/API error. The application remains an unauthenticated local test environment; only the designated, labeled Docker resource is readable through the broker.

@@ -4,15 +4,17 @@ The user authorized routine commits and pushes for this project, including minor
 
 Target account: `PARAMCLOUD1`. Requested public repository: `https://github.com/PARAMCLOUD1/FailureVerse-AI`.
 
-At the last authentication check, GitHub CLI was not logged in. Unauthenticated repository checks returned 404; that does not prove absence because a private repository can also return 404. Repository creation, public accessibility, pushes and remote CI must not be reported as successful until authenticated checks confirm them.
+On 15 November 2026 (local time), the existing Git Credential Manager account was verified as `PARAMCLOUD1`. An authenticated lookup found no target repository, and the requested repository was created and verified as **public**, with `main` as the default branch. No existing repository or history was overwritten. Authentication values were used only through the credential flow and were not printed or saved in the project.
 
-The portable official GitHub CLI is installed in ignored `.tools/gh/bin/gh.exe`. Complete login as the requested account using:
+The portable official GitHub CLI is installed in ignored `.tools/gh/bin/gh.exe`. Git pushes can use the existing credential helper; no additional login was needed for setup. If reauthentication or a separate CLI login is needed later, use:
 
 ```powershell
 & ./.tools/gh/bin/gh.exe auth login --hostname github.com --git-protocol https --web
 ```
 
 Do not paste a password or token into chat. After login, verify the account, check the existing repository, and create a new **public** repository only if it is absent. Preserve any existing history. Do not change an existing repository's visibility or overwrite its content without the required confirmation.
+
+The verified Phase 2.1 feature branch was fast-forwarded into `main`, preserving all commits. Remote commit history and [GitHub Actions](https://github.com/PARAMCLOUD1/FailureVerse-AI/actions/workflows/ci.yml) are the authoritative publication and CI state; verify the exact reviewed SHA rather than inferring success from a local test result.
 
 Phase 1 already existed as commit `94dd605`. The original local `master` branch was renamed to `main` without changing that commit. The earlier `.git` directory is owned by the prior sandbox account, so authorized host Git writes use a trust exception limited to this exact workspace (`git -c safe.directory=...`); no global wildcard trust was added.
 

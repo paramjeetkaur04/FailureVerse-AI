@@ -1,5 +1,7 @@
 # FailureVerse AI
 
+[Source repository](https://github.com/PARAMCLOUD1/FailureVerse-AI) · [GitHub Actions](https://github.com/PARAMCLOUD1/FailureVerse-AI/actions/workflows/ci.yml)
+
 **Autonomous Infrastructure Failure Prediction, Simulation & Recovery Intelligence Platform**
 
 A research project for the **AI for Future Workforce Agentic AI Bootcamp 2026**. Infrastructure incidents often require an engineer to gather scattered evidence, form hypotheses, compare recovery options, and verify results. FailureVerse aims to make that process observable and reproducible through specialized agents and isolated experiments.
