@@ -2,6 +2,7 @@ import asyncio
 import time
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -75,3 +76,71 @@ def test_unavailable_ollama_does_not_fabricate_a_report(settings, transport):
         result = wait_finished(client, run["id"])
         assert result["status"] == "failed" and result["report"] is None
         assert result["evidence"] == [] and result["model_calls"] == 0
+
+
+def test_transient_preflight_failure_retries_once_without_consuming_inference_budget(settings, transport):
+    class Transient(ScriptedProvider):
+        checks = 0
+        async def status(self):
+            self.checks += 1
+            if self.checks == 1:
+                return {"ready": False, "state": "unavailable", "detail": "Simulated metadata timeout"}
+            return await super().status()
+    provider = Transient()
+    settings.ai_enabled = True
+    with TestClient(create_app(settings, demo_transport=transport, agent_provider=provider, diagnostic_client=TestDiagnostics())) as client:
+        run = client.post("/api/investigations", json={"question": "Investigate collected container observations"}).json()
+        result = wait_finished(client, run["id"])
+        assert result["status"] == "completed" and provider.checks == 2
+        assert result["model_calls"] == 3 and result["tool_calls"] == 2
+        assert sum("retrying once" in event["title"] for event in result["events"]) == 1
+
+
+def test_persistent_preflight_unavailability_stops_after_one_retry(settings, transport):
+    class Offline(ScriptedProvider):
+        checks = 0
+        async def status(self):
+            self.checks += 1
+            return {"ready": False, "state": "unavailable", "detail": "Simulated provider unavailable"}
+    provider = Offline()
+    settings.ai_enabled = True
+    with TestClient(create_app(settings, demo_transport=transport, agent_provider=provider, diagnostic_client=TestDiagnostics())) as client:
+        run = client.post("/api/investigations", json={}).json()
+        result = wait_finished(client, run["id"])
+        assert provider.checks == 2 and result["status"] == "failed"
+        assert result["model_calls"] == result["tool_calls"] == 0
+        assert result["report"] is None and result["evidence"] == []
+
+
+@pytest.mark.parametrize("state", ["model_missing", "unsupported_model"])
+def test_preflight_does_not_retry_missing_or_unsupported_models(settings, transport, state):
+    class Unusable(ScriptedProvider):
+        checks = 0
+        async def status(self):
+            self.checks += 1
+            return {"ready": False, "state": state, "detail": "Simulated model configuration failure"}
+    provider = Unusable()
+    settings.ai_enabled = True
+    with TestClient(create_app(settings, demo_transport=transport, agent_provider=provider, diagnostic_client=TestDiagnostics())) as client:
+        run = client.post("/api/investigations", json={}).json()
+        result = wait_finished(client, run["id"])
+        assert provider.checks == 1 and result["status"] == "failed"
+        assert result["model_calls"] == result["tool_calls"] == 0
+
+
+def test_preflight_retry_remains_inside_original_deadline(settings, transport, monkeypatch):
+    class SlowRetry(ScriptedProvider):
+        checks = 0
+        async def status(self):
+            self.checks += 1
+            if self.checks == 1:
+                return {"ready": False, "state": "unavailable", "detail": "Simulated timeout"}
+            await asyncio.sleep(5)
+    provider = SlowRetry()
+    settings.ai_enabled = True
+    monkeypatch.setattr("app.services.investigations.DEADLINE_SECONDS", 0.03)
+    with TestClient(create_app(settings, demo_transport=transport, agent_provider=provider, diagnostic_client=TestDiagnostics())) as client:
+        run = client.post("/api/investigations", json={}).json()
+        result = wait_finished(client, run["id"])
+        assert provider.checks == 2 and result["status"] == "timed_out"
+        assert result["model_calls"] == result["tool_calls"] == 0

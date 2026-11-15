@@ -22,13 +22,14 @@ export default function InvestigationCenter() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (followActive = false) => {
     try {
       const [status, history] = await Promise.all([investigationApi.status(), investigationApi.list()]);
       setProvider(status);
       setRuns(history);
-      setSelected(previous => previous ?? history[0]?.id ?? null);
+      setSelected(previous => (followActive ? status.active_run_id : null) ?? previous ?? history[0]?.id ?? null);
       setError(null);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Agent services are unavailable.');
@@ -58,20 +59,25 @@ export default function InvestigationCenter() {
   }, [selected]);
 
   async function start() {
-    setBusy(true); setError(null);
+    setBusy(true); setActionError(null);
     try {
       const created = await investigationApi.start(question);
       setRun(created); setSelected(created.id);
       await refresh();
-    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to start investigation.'); }
+    } catch (failure) {
+      setActionError(failure instanceof Error ? failure.message : 'Unable to start investigation.');
+      // The server may have accepted the run before a response was lost. Follow its actual
+      // active ID rather than starting duplicate work or leaving progress on an older run.
+      await refresh(true);
+    }
     finally { setBusy(false); }
   }
 
   async function cancel() {
     if (!run) return;
-    setBusy(true);
+    setBusy(true); setActionError(null);
     try { setRun(await investigationApi.cancel(run.id)); await refresh(); }
-    catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to cancel investigation.'); }
+    catch (failure) { setActionError(failure instanceof Error ? failure.message : 'Unable to cancel investigation.'); }
     finally { setBusy(false); }
   }
 
@@ -88,7 +94,7 @@ export default function InvestigationCenter() {
   const running = active(run?.status);
   const stage = [...(run?.events ?? [])].reverse().find(event => event.kind === 'state');
   return <div className="investigation-center">
-    {error && <div className="connection-error" role="alert"><Activity size={18} /><p>{error}</p><button className="button secondary small" onClick={() => void refresh()}>Retry agent connection</button></div>}
+    {(actionError || error) && <div className="connection-error" role="alert"><Activity size={18} /><div>{actionError && <p>{actionError}</p>}{error && <p>{error}</p>}</div><button className="button secondary small" onClick={() => { setActionError(null); void refresh(true); }}>Retry agent connection</button></div>}
     <section className="panel investigation-form">
       <div className="panel-heading"><div><h2>Local investigation agent</h2><p>Ollama · LangGraph · read-only Docker diagnostics</p></div><Status value={provider?.ready ? 'healthy' : 'unavailable'} label={provider?.ready ? 'Model ready' : provider?.state.replaceAll('_', ' ') ?? 'Disconnected'} /></div>
       {!provider?.ready && <div className="provider-notice"><p>{provider?.detail ?? 'The backend did not return provider status.'}</p><code>ollama pull {provider?.model ?? 'qwen3:0.6b'}</code></div>}

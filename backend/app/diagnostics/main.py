@@ -8,6 +8,7 @@ from docker.errors import DockerException
 from fastapi import FastAPI, HTTPException
 
 from app.diagnostics.gateway import Denied, DockerGateway
+from app.diagnostics.limits import BROKER_REQUEST_SECONDS
 
 
 def create_broker(gateway=None) -> FastAPI:
@@ -26,7 +27,7 @@ def create_broker(gateway=None) -> FastAPI:
             raise HTTPException(429, "Another bounded diagnostic is running.")
         async with gate:
             try:
-                async with asyncio.timeout(7):
+                async with asyncio.timeout(BROKER_REQUEST_SECONDS):
                     return await asyncio.to_thread(gateway.execute, tool)
             except Denied as exc:
                 raise HTTPException(403, "Test-container allowlist validation failed.") from exc

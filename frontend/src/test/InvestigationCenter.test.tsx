@@ -103,3 +103,39 @@ it('polls running progress and then renders the persisted completed report', asy
     expect(investigationApi.get).toHaveBeenCalledTimes(2);
   } finally { vi.useRealTimers(); }
 });
+
+it('recovers the actual active run after a lost creation response and retains the error across polling', async () => {
+  vi.useFakeTimers();
+  try {
+    const running = { ...run, id: 'accepted-run', status: 'running', report: null, finished_at: null };
+    vi.mocked(investigationApi.status).mockResolvedValueOnce(status).mockResolvedValue({ ...status, active_run_id: running.id });
+    vi.mocked(investigationApi.get).mockResolvedValue(running);
+    vi.mocked(investigationApi.start).mockRejectedValue(new Error('Creation response was lost.'));
+    render(<InvestigationCenter />);
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => { screen.getByRole('button', { name: 'Start investigation' }).click(); });
+    expect(investigationApi.get).toHaveBeenCalledWith('accepted-run');
+    expect(screen.getByRole('heading', { name: 'Investigation in progress' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Creation response was lost.');
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Creation response was lost.');
+    expect(investigationApi.start).toHaveBeenCalledTimes(1);
+  } finally { vi.useRealTimers(); }
+});
+
+it('keeps a cancellation error visible until an explicit retry', async () => {
+  vi.useFakeTimers();
+  try {
+    const running = { ...run, status: 'running', report: null, finished_at: null };
+    vi.mocked(investigationApi.list).mockResolvedValue([running]);
+    vi.mocked(investigationApi.get).mockResolvedValue(running);
+    vi.mocked(investigationApi.cancel).mockRejectedValue(new Error('Cancellation request failed.'));
+    render(<InvestigationCenter />);
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => { screen.getByRole('button', { name: 'Cancel investigation' }).click(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(screen.getByRole('alert')).toHaveTextContent('Cancellation request failed.');
+    await act(async () => { screen.getByRole('button', { name: 'Retry agent connection' }).click(); });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  } finally { vi.useRealTimers(); }
+});

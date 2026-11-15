@@ -105,6 +105,9 @@ class InvestigationService:
             self.event(run_id, {"kind": "state", "title": "Checking actual local Ollama availability"})
             async with asyncio.timeout(max(0, deadline-monotonic())):
                 availability = await self.provider.status()
+                if not availability["ready"] and availability.get("state") == "unavailable":
+                    self.event(run_id, {"kind": "error", "title": "Local Ollama availability check failed; retrying once within the investigation deadline"})
+                    availability = await self.provider.status()
                 if not availability["ready"]:
                     raise ProviderError(availability["detail"])
                 agent = InvestigationAgent(self.provider, self.diagnostics, lambda event: self.event(run_id, event))

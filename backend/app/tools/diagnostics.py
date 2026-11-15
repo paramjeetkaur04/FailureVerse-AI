@@ -7,6 +7,7 @@ import httpx
 
 from app.agents.schemas import NoArguments, TOOLS
 from app.core.config import Settings
+from app.diagnostics.limits import CLIENT_READ_SECONDS, CLIENT_REQUEST_SECONDS
 
 
 class DiagnosticError(Exception):
@@ -45,8 +46,9 @@ class DiagnosticClient:
                 raise DiagnosticError("Fixed service health probes are unavailable in this process.")
             return await self.health_service.investigation_snapshot()
         try:
-            async with asyncio.timeout(8), httpx.AsyncClient(
-                base_url=str(self.settings.diagnostics_base_url), timeout=6,
+            async with asyncio.timeout(CLIENT_REQUEST_SECONDS), httpx.AsyncClient(
+                base_url=str(self.settings.diagnostics_base_url),
+                timeout=httpx.Timeout(CLIENT_READ_SECONDS, connect=2, write=2, pool=2),
                 trust_env=False, follow_redirects=False, transport=self.transport,
             ) as client:
                 async with client.stream("GET", f"/diagnostics/{target}/{name}") as response:
@@ -63,5 +65,9 @@ class DiagnosticClient:
                     if not isinstance(result, dict) or result.get("measurement") != "actual" or not isinstance(result.get("data"), dict):
                         raise DiagnosticError("Invalid diagnostic observation.")
                     return result
-        except (httpx.HTTPError, TimeoutError, ValueError) as exc:
-            raise DiagnosticError("Diagnostic gateway is unavailable or returned an invalid response.") from exc
+        except (httpx.TimeoutException, TimeoutError) as exc:
+            raise DiagnosticError("Diagnostic gateway request timed out; no observation was collected.") from exc
+        except httpx.HTTPError as exc:
+            raise DiagnosticError("Diagnostic gateway is unavailable; no observation was collected.") from exc
+        except ValueError as exc:
+            raise DiagnosticError("Diagnostic gateway returned invalid JSON; no observation was collected.") from exc
