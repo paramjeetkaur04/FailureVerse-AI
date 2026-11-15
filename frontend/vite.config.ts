@@ -10,6 +10,7 @@ export default defineConfig({
     proxy: { '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true } },
   },
   test: {
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: false,
