@@ -86,6 +86,12 @@ This deliberately bounded finding vocabulary prevents the reproduced unsupported
 
 SQLite stores concise state transitions, selected tools, timestamps, bounded observations, counters, errors, and final reports. Private model thinking and complete prompt conversations are not persisted. Ollama thinking and external LangSmith tracing are disabled for the workflow. A single API worker and a unique active-run slot enforce one investigation at a time. Cancellation, deadline expiry, provider failures, and backend restarts preserve partial evidence and explicit terminal states. Interrupted work is not silently resumed or granted a fresh hidden budget.
 
+## Transport follow-up
+
+The 15 November browser checks found transient preflight failures, gateway timeouts and a lost creation response. Preflight now retries `unavailable` once within the same 180-second deadline; missing/unsupported models do not retry. The broker remains limited to 7 seconds, while its client allows an 8-second read inside a 9-second overall ceiling so the caller does not abandon a legitimate bounded result prematurely. Timeouts, connection failures and invalid JSON have distinct sanitized messages. Docker restrictions and model/tool limits are unchanged.
+
+The dashboard can follow the actual active run after a lost creation response, and start/cancel errors remain visible across polling. Actual Edge navigation, downloads, citations, cancellation, insufficient-evidence rendering and viewport layouts are verified separately from component tests. See the [browser follow-up report](phase-2-1-browser-report.md) and [reproduction commands](testing.md).
+
 ## API
 
 | Method | Path | Behavior |

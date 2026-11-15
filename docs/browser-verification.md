@@ -1,26 +1,28 @@
 # Browser verification checklist
 
-Status on 14 November 2026: **not executed in a real browser**. The computer-use inventory returned no browser and these errors: `Computer Use native pipe is unavailable` and `The browser access host is unavailable`. HTTP smoke checks and jsdom tests passed separately; neither establishes browser layout or console correctness.
+Status on **15 November 2026: 15 real-browser checks passed**, with no final failures, skips, retries or unexpected console warnings/errors. Playwright used installed Microsoft Edge **157.0.4341.46**, headless in an isolated profile, against the actual dashboard. The earlier native/browser connector errors remain true, but standalone Playwright provided working browser automation. HTTP smoke and jsdom results are still reported separately.
 
-Use `http://localhost:8080` with the local Compose stack and Ollama running. Record browser/version, date, viewport, result and any screenshot path for each row. Do not put secrets or raw private logs in screenshots.
+Use `http://localhost:8080` with Compose and Ollama running. Commands, modes and CI skips are in [testing.md](testing.md); run IDs, durations, source-validation results and initial failures are in the [browser follow-up report](phase-2-1-browser-report.md). Final JSON, screenshots and traces are under ignored `artifacts/browser/`. The selected documentation screenshot contains only generic local service observations.
 
-| Check | Manual steps and expected result | Result |
+| Check | Executed check and expected behavior | Result |
 | --- | --- | --- |
-| Navigation | Open Overview, Infrastructure, Health-check history, AI Investigation Center and Configuration. Each page should load its intended content without blank screens. | Pending |
-| Creation | Wait for Model ready, enter a question about current demo health and start. A new saved run should appear; repeat submissions must be disabled while active. | Pending |
-| Live progress | Observe counters and stage text while the run executes. Tool choices and observations should appear as persisted events. | Pending |
-| Execution timeline | Compare selected tools, call counts, timestamps and observations with the exported JSON. The timeline must not claim recovery was executed. | Pending |
-| Final report | Check source-validated observations, unconfirmed hypotheses and unexecuted recommendations. Summary and finding citations must scroll to the matching evidence; expand it and compare source fields and quantities. | Pending |
-| Insufficient evidence | Ask for disk utilization, which is not measured. The result must state insufficient evidence and must not invent a disk percentage. | Pending |
-| Historical report | Select an old Phase 2 report. It must show the warning that source-field validation did not apply to that output. | Pending |
-| Cancellation | Start another run and cancel it. The terminal state must be visible, partial evidence preserved and the start control enabled after active status refresh. | Pending |
-| Provider failure | Stop only the local Ollama helper, refresh provider status and confirm creation becomes unavailable with an explicit error. Restart using the setup guide. | Pending |
-| Backend/network error | With browser developer tools, temporarily use offline mode and refresh. Confirm the error is visible and no report or measurement is invented; restore networking and retry. | Pending |
-| Export | Export a completed and an insufficient-evidence run. Check downloaded JSON IDs, sources, provenance, limits, report outcome and validation notes against the screen. | Pending |
-| Desktop | At 1440×900, check all controls, report columns, long source fields and expanded evidence for clipping or overlap. | Pending |
-| Tablet | At 1024×768, check history/detail stacking and page navigation. | Pending |
-| Mobile | At 390×844 and 360×800, open/close the menu, navigate, start/cancel, expand evidence, and check horizontal overflow and readable citation labels. | Pending |
-| Keyboard | Tab through navigation, form, run controls, citations and details; confirm visible focus and that Enter/Space activate controls. | Pending |
-| Console/network | Open developer tools before navigation. Check all flows above for uncaught JavaScript errors, React warnings, failed asset loads and unexpected API failures. Record actual messages, not a presumed pass. | Pending |
+| Navigation | All five implemented pages load at four viewport sizes; overview waits for the lazy chart or its empty state. | Passed |
+| Creation | Actual browser POST returns 202, progress appears, duplicate submission is disabled. | Passed with real Ollama/Docker |
+| Live progress | Running state, stage and persisted diagnostic events are rendered. | Passed |
+| Execution timeline | Actual tool names render; downloaded events, call counts and limits match the persisted API record. | Passed |
+| Final report | Grounded observations, tentative hypotheses, recommendations and citations render; links reach expandable matching evidence. | Passed on desktop/mobile |
+| Insufficient evidence | Actual disk question returns insufficient evidence and no invented disk percentage. | Passed with real Ollama/Docker |
+| Historical report | Actual stored legacy report shows the unverified-output warning. | Passed |
+| Cancellation | Cancel after actual service observations; terminal state, retained evidence and released start control verified. | Passed with real Ollama/Docker |
+| Provider failure | Browser routes deliberately simulate unavailable-model status and HTTP 503; start disables and explicit retry recovers. Ollama was not intentionally stopped. | Passed, simulated error inputs |
+| Backend/network error | Browser context goes offline, shows the failure and saved-data notice, then recovers through retry after networking is restored. | Passed |
+| Export | Real completed and insufficient-evidence JSON downloads match API report, evidence, events, status, counters and limits. | Passed |
+| Desktop | 1440x900 navigation/screenshots, document-width check, report links and export. | Passed |
+| Tablet | 1024x768 navigation/screenshots and document-width check. | Passed |
+| Mobile | 390x844 and 360x800 menu/navigation/screenshots and document-width checks; 360px saved-report citations, expansion and download. Live creation/cancellation used desktop. | Passed for the stated viewport flows |
+| Keyboard | Tab to skip link, Enter to main, Tab to health-check control. | Passed for these keys; full audit pending |
+| Console/network | Browser listeners collect uncaught exceptions, warnings and errors across all flows. Only deliberately induced network/resource errors are narrowly allowed. | No unexpected messages |
 
-The component suites cover rendering, API-error display, cancellation, citations, insufficient-evidence messaging and historical warnings with isolated fixtures. Physical responsiveness, actual downloads, console output and browser interaction still require this checklist or working browser automation.
+The component suites additionally cover recovery of the actual active ID after a lost start response and operation errors persisting across polling. These deterministic component inputs are distinct from live browser investigations.
+
+Remaining manual coverage: full keyboard/screen-reader audit, physical touch devices, Firefox/Safari and subjective visual review on other displays. These were not executed or counted as passes. Headless viewport checks do not establish physical-device compatibility. If repeating manually, record browser/version, date, viewport, result and screenshot location; keep secrets and private logs out of screenshots.

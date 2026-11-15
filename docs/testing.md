@@ -72,4 +72,40 @@ The smoke test verifies served HTML/assets, API proxying, real Flask HTTP health
 
 Failed and insufficient-evidence attempts are preserved as well. Do not call an execution-only check a semantic pass for historical Phase 2 free-form reports; the Phase 2.1 verifier additionally requires `grounding_version=2.1` and an accepted model selection.
 
-Real-browser navigation, progress, rendering, errors, responsiveness and console checks are separate. See [browser-verification.md](browser-verification.md); unavailability of browser automation is not a pass.
+## Real-browser verification
+
+The Playwright suite runs an actual browser against the existing local stack at `http://localhost:8080`; it does not start a replacement application or inject happy-path API data. The target setting `FV_E2E_BASE_URL` accepts loopback HTTP origins only. All runs use one browser worker and bounded action, test and suite deadlines.
+
+On this Windows machine, use the installed Edge browser in an isolated test profile:
+
+```powershell
+# frontend/; keep Docker Compose running
+$env:FV_E2E_BROWSER_CHANNEL = 'msedge'
+npm.cmd run typecheck:browser
+npm.cmd run test:browser
+
+# Opt in to actual browser-to-Ollama-to-Docker creation, cancellation and insufficient evidence
+$env:FV_E2E_LIVE_AI = '1'
+npm.cmd run test:browser
+```
+
+For a clean machine using bundled Chromium, install dependencies with `npm ci`, run `npx playwright install chromium`, and leave `FV_E2E_BROWSER_CHANNEL` unset. Linux CI uses `npx playwright install --with-deps chromium`. See the [Playwright browser guide](https://playwright.dev/docs/browsers).
+
+Default checks cover navigation at 1440x900, 1024x768, 390x844 and 360x800, actual health-check persistence, keyboard skip navigation, browser offline/recovery, and explicitly simulated unavailable-provider/API-error responses. If existing reports are present, separate tests verify real report citations/downloads on desktop and mobile and historical-output warnings. A fresh CI database has no investigations: those three saved-report checks and the three opt-in live-AI checks are explicitly skipped. CI does not claim live-model verification.
+
+Opt-in live checks use the real model and Docker: a completed grounded health investigation, cancellation after a diagnostic observation with evidence retained, and an unmeasured disk request that must return insufficient evidence. Terminal failures fail promptly and preserve the run; there are no automatic test retries or scripted model replacements. Browser exceptions, warnings and unexpected console errors fail each check. Only the deliberately induced network failures receive narrow console exceptions.
+
+Results, screenshots, failure traces and downloaded-record comparisons are stored under ignored `artifacts/browser/`. `live-results.json` identifies opt-in runs; `results.json` identifies default runs. These artifacts are verification outputs, not application fixtures. The CI Compose job uploads its own browser artifacts for seven days and does not deploy anything.
+
+Revalidate a browser-created **completed** report independently in Python using its full run UUID:
+
+```powershell
+# project root; replace the example UUID with the completed run shown in exported JSON
+& ./.venv/Scripts/python.exe scripts/verify_agent.py --run-id '974d0db1-01e6-44d1-99c7-99428b44cfef' --output artifacts/browser/revalidated-report.json
+```
+
+This mode performs no model inference and starts no new investigation. It checks the persisted source fields, citations, accepted selection and execution budgets. Its short verification time is distinct from the original investigation duration computed from recorded timestamps.
+
+Vitest is pinned to 5.1.0 and Playwright to 1.65.1. The frontend CI job runs `npm audit --audit-level=moderate` as well as unit tests, browser TypeScript checks and the production build. Run the audit from `frontend/` when reviewing dependency changes.
+
+See [browser-verification.md](browser-verification.md) for executed results and the remaining manual checks. Browser emulation does not establish physical-device or cross-browser compatibility.

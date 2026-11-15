@@ -2,7 +2,7 @@
 
 ## Phase 2.1 addendum
 
-The original Phase 2 findings below are preserved as historical evidence. Phase 2.1 replaces free-form factual generation with model-selected finding IDs and deterministic source-field rendering, adds fixed service probes and explicit insufficient-evidence results, and validates required observations so a report cannot omit the main finding. See [phase-2-1-report.md](phase-2-1-report.md) for the final tests, live run, real-model controlled evaluation, browser limitation and milestone recommendation. Original inaccurate reports were not edited or retroactively marked accurate. Phase 3 has not started.
+The original Phase 2 findings below are preserved as historical evidence. Phase 2.1 replaces free-form factual generation with model-selected finding IDs and deterministic source-field rendering, adds fixed service probes and explicit insufficient-evidence results, and validates required observations so a report cannot omit the main finding. See [phase-2-1-report.md](phase-2-1-report.md) for initial grounding and evaluation results, then the [15 November browser follow-up](phase-2-1-browser-report.md) for 176 passing tests, real-browser verification and transport fixes. Original inaccurate reports were not edited or retroactively marked accurate. Phase 3 has not started.
 
 ## Original Phase 2 verification
 

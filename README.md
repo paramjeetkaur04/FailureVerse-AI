@@ -21,13 +21,17 @@ A research project for the **AI for Future Workforce Agentic AI Bootcamp 2026**.
 - Actual SQLite query latency and Flask HTTP health-check latency. Failed measurements remain missing; no invented CPU, RAM, incident, or AI statistics.
 - Fixed local diagnostic targets, response-size and time limits, bounded history, explicit API failures, restricted browser origins, and secret-free public configuration.
 - Dockerized Flask test app; resource-limited Compose services; optional Prometheus profile.
-- Pytest, Vitest, React Testing Library, and a real Flask HTTP → FastAPI → SQLite integration test. Initial GitHub Actions verification workflow; no deployment or publishing workflow.
+- Pytest, Vitest, React Testing Library, Playwright real-browser checks, and a real Flask HTTP → FastAPI → SQLite integration test. GitHub Actions runs tests, builds, dependency/secret checks and Chromium verification; no deployment workflow.
 
 See [Phase 1 verification report](docs/phase-1-report.md) for executed checks and limits. Source code being present does not mean the corresponding environment or external workflow has been verified.
 
 The Phase 1 automated suites contain **53 tests**: 38 backend, 3 Flask demo, and 12 frontend tests. The production build, container builds, and a live frontend-to-backend-to-Flask/SQLite smoke check are part of the milestone verification. Browser layout review, the optional Prometheus profile, and execution of the workflow on GitHub are separate checks; see the report for their status.
 
-The original Phase 2 suites contained **104 tests**. Phase 2.1 currently has **150 tests**: 128 backend, 3 Flask demo, and 19 frontend tests. Basic Ruff lint, source-secret checks, the production build and controlled evaluations run separately. Browser automation is unavailable on this host; use the [manual verification checklist](docs/browser-verification.md). See [testing.md](docs/testing.md) for commands and metric definitions.
+The original Phase 2 suites contained **104 tests**. Phase 2.1 now has **176 passing local tests**: 137 backend, 3 Flask demo, 21 frontend, and 15 real-browser checks with installed Edge. Browser checks cover navigation, progress, reports/citations, downloads, cancellation, errors and desktop/tablet/mobile viewport layouts. Real-model checks are opt-in; fresh CI skips those and saved-report cases. Basic Ruff lint, secret/dependency checks, the production build and controlled evaluations run separately. See the [browser follow-up report](docs/phase-2-1-browser-report.md), [verification checklist](docs/browser-verification.md) and [testing instructions](docs/testing.md).
+
+![Actual FailureVerse local dashboard with measured service health and latency](docs/screenshots/dashboard-desktop.png)
+
+Captured from the real local dashboard on 15 November 2026. Values in this screenshot are a recorded observation, not a live feed.
 
 ## Technology stack
 
@@ -37,7 +41,7 @@ The original Phase 2 suites contained **104 tests**. Phase 2.1 currently has **1
 | API and persistence | FastAPI, Pydantic, SQLAlchemy, SQLite |
 | Investigation | LangGraph, local Ollama native tool calling, Python source-field validation |
 | Diagnostics | Restricted Docker SDK broker, fixed HTTP and SELECT 1 probes |
-| Verification | Pytest, Vitest, React Testing Library, Ruff, source-secret checks, GitHub Actions |
+| Verification | Pytest, Vitest, React Testing Library, Playwright, Ruff, source-secret/dependency checks, GitHub Actions |
 | Local environment | Docker Compose, resource-limited test containers, optional Prometheus |
 
 ## Architecture

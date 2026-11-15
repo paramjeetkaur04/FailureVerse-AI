@@ -2,7 +2,7 @@
 
 Date: **14 November 2026**. Phase 3 has not started. The existing FastAPI/SQLite, LangGraph, Ollama, restricted broker and React architecture is retained.
 
-**Technical result:** source-grounded reporting, required observations and bounded failure handling pass the local checks, two real Ollama-to-Docker investigations, and all five controlled scenarios with real Ollama inference. **Final milestone approval requires real-browser review and passing remote CI for the reviewed commit.** The public repository was created and verified on 15 November 2026 (local time); consult its live Actions result for the exact SHA.
+**Initial technical result:** source-grounded reporting, required observations and bounded failure handling passed the local checks, two real Ollama-to-Docker investigations, and all five controlled scenarios with real Ollama inference. The subsequent [15 November browser follow-up](phase-2-1-browser-report.md) records 176 passing tests, actual Edge verification, additional live investigations and transport fixes. Its results supersede the initial browser limitation below. Final milestone review must use passing remote CI for the reviewed commit. The public repository was created and verified on 15 November 2026 (local time).
 
 ## What changed
 
@@ -12,7 +12,7 @@ Every observation has a UUID-based evidence namespace. Each HTTP/query probe rec
 
 Hypotheses are explicitly tentative and eligible only when their supporting failure condition is observed. Recommendations are never executed. Missing/inconsistent quantities, unsupported disk/CPU-utilization requests, incomplete coverage and invalid report selections produce explicit uncertainty or `insufficient_evidence`; retained verifier facts are not presented as an accepted model conclusion. Historical free-form reports remain preserved and visibly unverified.
 
-## Tests and checks
+## Initial tests and checks (14 November)
 
 | Check | Final executed result |
 | --- | --- |
@@ -77,7 +77,7 @@ These are five narrow cases with one attempt per case, constrained tool availabi
 
 ## Browser and GitHub status
 
-Browser inventory returned no app/browser and reported `Computer Use native pipe is unavailable` and `The browser access host is unavailable`. Navigation, physical responsiveness, actual export/download behavior, keyboard interaction and console errors have therefore **not** passed a browser check. The complete [manual checklist](browser-verification.md) covers every requested flow. Component and HTTP tests are recorded separately.
+The initial browser inventory returned no app/browser and reported `Computer Use native pipe is unavailable` and `The browser access host is unavailable`. Browser checks were therefore not executed on 14 November. On 15 November a standalone Playwright runner successfully verified the actual Edge browser; see the [follow-up report](phase-2-1-browser-report.md) and [executed checklist](browser-verification.md). Component, HTTP and real-browser results remain separately identified.
 
 Phase 1 commit `94dd605` and all history were preserved. The original branch was renamed from `master` to `main`. Verified Phase 2 work was split into backend, dashboard and documentation commits; Phase 2.1 work uses a feature branch and logical Conventional Commits. Staged reviews, relevant checks and secret scans precede commits. No credentials, local models, virtual environments, caches, generated builds, databases, logs or evaluation JSON were staged.
 
@@ -95,6 +95,6 @@ The public repository is `https://github.com/PARAMCLOUD1/FailureVerse-AI`, creat
 
 ## Recommendation and remaining limits
 
-**Ready for technical review of the bounded Phase 2.1 investigation milestone. Require manual browser review and a passing Actions run for the reviewed commit before final Phase 2 milestone approval. Do not begin Phase 3.**
+**Ready for milestone review using the subsequent real-browser follow-up and a passing Actions run for the reviewed commit. Do not begin Phase 3.**
 
 The finding vocabulary and keyword-based coverage policy are deliberately limited. They do not establish arbitrary log interpretation, novel causal diagnosis, prediction accuracy, recovery effectiveness or instrumentation correctness. The local model can repeat diagnostics and choose redundant findings, but attempts remain bounded. Missing CPU interval/disk data stay unavailable. A full outage of the persistent SQLite store can prevent durable investigations and must remain an explicit storage/API error. The application remains an unauthenticated local test environment; only the designated, labeled Docker resource is readable through the broker.
