@@ -19,6 +19,10 @@ for (const viewport of [
     for (const [label, heading] of pages) {
       await navigate(page, label);
       await expect(page.getByRole('heading', { name: heading, exact: true, level: 1 })).toBeVisible();
+      if (label === 'Overview') {
+        await expect(page.getByRole('heading', { name: 'Health-check latency', exact: true })).toBeVisible();
+        await expect(page.locator('.recharts-surface, .chart-empty')).toBeVisible();
+      }
       if (label === 'AI Investigation Center') {
         await expect(page.getByRole('heading', { name: 'Local investigation agent' })).toBeVisible();
       }
