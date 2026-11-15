@@ -27,7 +27,7 @@ Hypotheses are explicitly tentative and eligible only when their supporting fail
 | Final Compose readiness | Backend, frontend, broker and demo healthy |
 | Live HTTP smoke check | Passed: real assets, reverse proxy, readiness, Flask HTTP and SQLite persistence |
 | Real browser | **Not executed**: browser/native automation hosts unavailable |
-| Remote CI | [GitHub Actions](https://github.com/PARAMCLOUD1/FailureVerse-AI/actions/workflows/ci.yml); verify the reviewed SHA separately from local results |
+| Remote CI | [GitHub Actions](https://github.com/paramjeetkaur04/FailureVerse-AI/actions/workflows/ci.yml); verify the reviewed SHA separately from local results |
 
 The initial eight old-contract regression failures were corrected while preserving budget, policy and no-fabrication coverage. A disk-scope test found an unnecessary resource-tool requirement; it was fixed. The final build also caught a Node/DOM timer overload mismatch in the new progress test; the test now uses Vitest's fake clock and the full frontend suite/build passed again. No failing final check is being counted as a pass.
 

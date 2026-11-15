@@ -66,7 +66,7 @@ Initial browser results and traces are retained under ignored `artifacts/browser
 
 Run commands are in [testing.md](testing.md). `scripts/verify_agent.py --run-id <completed-run-uuid>` independently revalidates an existing report without starting another model run. Its verification duration is reported separately from the original investigation duration.
 
-CI now installs Chromium, checks the real Compose dashboard, retains browser artifacts for seven days, runs frontend dependency audit and checks browser-test TypeScript. Fresh CI has no Ollama or saved investigation records, so the three live-AI and three saved-report cases explicitly skip there. CI must not be described as reproducing all 15 local browser cases. Check [Actions for the reviewed SHA](https://github.com/PARAMCLOUD1/FailureVerse-AI/actions/workflows/ci.yml); local success alone is not remote CI success.
+CI now installs Chromium, checks the real Compose dashboard, retains browser artifacts for seven days, runs frontend dependency audit and checks browser-test TypeScript. Fresh CI has no Ollama or saved investigation records, so the three live-AI and three saved-report cases explicitly skip there. CI must not be described as reproducing all 15 local browser cases. Check [Actions for the reviewed SHA](https://github.com/paramjeetkaur04/FailureVerse-AI/actions/workflows/ci.yml); local success alone is not remote CI success. GitHub verified that this canonical address and the original requested URL resolve to the same public repository; details are in [version-control.md](version-control.md).
 
 Changed files in this follow-up:
 
@@ -74,7 +74,7 @@ Changed files in this follow-up:
 - Regressions: `backend/tests/test_diagnostic_client.py`, `test_investigations.py`, `frontend/src/test/InvestigationCenter.test.tsx`.
 - Browser tooling: `frontend/e2e/dashboard.spec.ts`, `helpers.ts`, `investigation.spec.ts`, `playwright.config.ts`, `tsconfig.e2e.json`, `vite.config.ts`, `package.json`, `package-lock.json`, `.gitignore`.
 - Independent verifier and CI: `scripts/verify_agent.py`, `.github/workflows/ci.yml`.
-- Documentation: README, phase guides/reports, testing and browser checklist, plus the selected real dashboard screenshot.
+- Documentation: README, phase guides/reports, testing, browser checklist and version-control guide, plus the selected real dashboard screenshot.
 
 ## Milestone recommendation and limits
 

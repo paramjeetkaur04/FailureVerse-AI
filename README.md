@@ -1,6 +1,6 @@
 # FailureVerse AI
 
-[Source repository](https://github.com/PARAMCLOUD1/FailureVerse-AI) · [GitHub Actions](https://github.com/PARAMCLOUD1/FailureVerse-AI/actions/workflows/ci.yml)
+[Source repository](https://github.com/paramjeetkaur04/FailureVerse-AI) · [GitHub Actions](https://github.com/paramjeetkaur04/FailureVerse-AI/actions/workflows/ci.yml)
 
 **Autonomous Infrastructure Failure Prediction, Simulation & Recovery Intelligence Platform**
 
