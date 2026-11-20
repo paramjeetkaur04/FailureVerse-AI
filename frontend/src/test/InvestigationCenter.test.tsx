@@ -30,6 +30,13 @@ it('shows unavailable provider honestly and disables starting', async () => {
   expect(screen.queryByRole('heading', { name: 'Investigation report' })).not.toBeInTheDocument();
 });
 
+it('disables legacy creation while a coordinated workflow owns the execution slot', async () => {
+  vi.mocked(investigationApi.status).mockResolvedValue({ ...status, active_workflow_id: 'active-workflow' });
+  render(<InvestigationCenter />);
+  expect(await screen.findByText(/A coordinated workflow owns the execution slot/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Start investigation' })).toBeDisabled();
+});
+
 it('starts a real API request and displays tools, evidence and returned report', async () => {
   const user = userEvent.setup();
   render(<InvestigationCenter />);

@@ -6,6 +6,7 @@ from app.api.schemas import (
     CheckRequest, CheckResponse, OverviewResponse, PublicConfig, ReadinessResponse,
 )
 from app.services.health import CheckBusyError
+from app.core.version import VERSION
 
 router = APIRouter(prefix="/api")
 
@@ -17,8 +18,8 @@ def health(request: Request, response: Response) -> ReadinessResponse:
             connection.execute(text("SELECT 1"))
     except SQLAlchemyError:
         response.status_code = 503
-        return ReadinessResponse(status="unavailable", version="0.2.0", database="unavailable")
-    return ReadinessResponse(status="healthy", version="0.2.0", database="connected")
+        return ReadinessResponse(status="unavailable", version=VERSION, database="unavailable")
+    return ReadinessResponse(status="healthy", version=VERSION, database="connected")
 
 
 @router.get("/overview", response_model=OverviewResponse)

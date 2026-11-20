@@ -91,7 +91,7 @@ class InvestigationAgent:
     def event(self, kind: str, title: str, **details):
         self.emit({"kind": kind, "title": title, "model_calls": self.budget.model_calls, "tool_calls": self.budget.tool_calls, **details})
 
-    async def run(self, question: str) -> dict:
+    async def run(self, question: str, *, seed_evidence: list[dict] | None = None) -> dict:
         words = question.lower()
         if re.search(r"\b(database|select\s+1)\b", words):
             self.required_tools.add("service_health")
@@ -111,7 +111,7 @@ class InvestigationAgent:
         graph.add_node("reason", self.reason)
         graph.add_node("diagnose", self.diagnose)
         graph.add_node("report", self.report)
-        graph.add_edge(START, "reason")
+        graph.add_conditional_edges(START, lambda s: 'report' if self.has_coverage(s['evidence']) or self.budget.model_calls >= MAX_MODEL_CALLS-1 else 'reason')
         graph.add_conditional_edges("reason", lambda s: "diagnose" if s["pending"] else "report" if s["finish"] else "reason")
         graph.add_conditional_edges("diagnose", lambda s: "report" if self.has_coverage(s["evidence"]) or self.budget.model_calls >= MAX_MODEL_CALLS-1 or self.budget.tool_calls >= MAX_TOOL_CALLS else "reason")
         graph.add_edge("report", END)
@@ -121,7 +121,7 @@ class InvestigationAgent:
             async with asyncio.timeout(DEADLINE_SECONDS):
                 result = await graph.compile().ainvoke({
                     "messages": [{"role": "system", "content": SYSTEM + ("\nRequired read-only coverage for this question: " + ", ".join(sorted(self.required_tools)) if self.required_tools else "")}, {"role": "user", "content": question}],
-                    "pending": [], "evidence": [], "finish": False, "retries": 0, "report": None,
+                    "pending": [], "evidence": list(seed_evidence or []), "finish": False, "retries": 0, "report": None,
                 }, config={"recursion_limit": 16})
         return result["report"]
 

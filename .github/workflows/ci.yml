@@ -40,6 +40,8 @@ jobs:
         working-directory: demo-app
       - name: Controlled evaluation (simulated tools and scripted model)
         run: python scripts/evaluate_agent.py --output artifacts/evaluation-scripted.json
+      - name: Controlled coordination evaluation (simulated tools and scripted model)
+        run: python scripts/evaluate_workflow.py --output artifacts/phase3/evaluation-scripted.json
 
   frontend:
     runs-on: ubuntu-latest
@@ -84,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: browser-verification
-          path: artifacts/browser/
+          path: artifacts/phase3/browser/
           retention-days: 7
           if-no-files-found: ignore
       - if: failure()

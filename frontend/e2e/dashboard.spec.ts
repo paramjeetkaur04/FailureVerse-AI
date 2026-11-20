@@ -6,6 +6,7 @@ const pages = [
   ['Infrastructure', 'Service health'],
   ['Health-check history', 'Observation history'],
   ['AI Investigation Center', 'AI Investigation Center'],
+  ['Agent workflows', 'Agent workflows'],
   ['Configuration', 'Workspace configuration'],
 ];
 
@@ -25,6 +26,9 @@ for (const viewport of [
       }
       if (label === 'AI Investigation Center') {
         await expect(page.getByRole('heading', { name: 'Local investigation agent' })).toBeVisible();
+      }
+      if (label === 'Agent workflows') {
+        await expect(page.getByRole('heading', { name: 'Coordinated agent workflow' })).toBeVisible();
       }
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
         { message: `${label} must fit the ${viewport.width}px viewport` }).toBeLessThanOrEqual(1);

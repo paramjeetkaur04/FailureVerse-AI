@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.agents.investigation import InvestigationAgent, InvestigationFailure
 from app.agents.schemas import DEADLINE_SECONDS, RunResponse
 from app.core.redaction import redact
+from app.core.execution import ExecutionBusy, ExecutionSlot
 from app.models.investigation import InvestigationRecord
 from app.services.ollama import ProviderError
 from app.tools.diagnostics import PolicyDenied
@@ -20,8 +21,7 @@ from app.tools.diagnostics import PolicyDenied
 logger = logging.getLogger(__name__)
 
 
-class InvestigationBusy(Exception):
-    pass
+InvestigationBusy = ExecutionBusy
 
 
 def utc(value):
@@ -29,11 +29,12 @@ def utc(value):
 
 
 class InvestigationService:
-    def __init__(self, engine, settings, provider, diagnostics):
+    def __init__(self, engine, settings, provider, diagnostics, execution_slot=None):
         self.engine, self.settings = engine, settings
         self.provider, self.diagnostics = provider, diagnostics
         self.task: asyncio.Task | None = None
         self.active_id: str | None = None
+        self.execution_slot = execution_slot or ExecutionSlot()
 
     def recover_interrupted(self) -> None:
         with Session(self.engine) as session, session.begin():
@@ -84,6 +85,7 @@ class InvestigationService:
         if self.task and not self.task.done():
             raise InvestigationBusy("An investigation is already running.")
         run_id = str(uuid4())
+        self.execution_slot.claim(f'investigation:{run_id}')
         deadline = monotonic()+DEADLINE_SECONDS
         try:
             with Session(self.engine) as session, session.begin():
@@ -92,7 +94,11 @@ class InvestigationService:
                     model=self.settings.ollama_model, status="queued", active_slot=1,
                 ))
         except IntegrityError as exc:
+            self.execution_slot.release(f'investigation:{run_id}')
             raise InvestigationBusy("An investigation is already running.") from exc
+        except Exception:
+            self.execution_slot.release(f'investigation:{run_id}')
+            raise
         self.active_id = run_id
         self.task = asyncio.create_task(self._run(run_id, redact(question, 400), deadline))
         return self.get(run_id)
@@ -124,6 +130,7 @@ class InvestigationService:
             self.finish(run_id, "failed", error="Investigation failed safely. Review the recorded events and local service availability.")
         finally:
             self.active_id = None
+            self.execution_slot.release(f'investigation:{run_id}')
 
     async def cancel(self, run_id: str) -> bool:
         if self.active_id != run_id or not self.task or self.task.done():
@@ -134,6 +141,7 @@ class InvestigationService:
         except asyncio.CancelledError:
             self.finish(run_id, "cancelled", error="Investigation cancelled before inference began.")
             self.active_id = None
+            self.execution_slot.release(f'investigation:{run_id}')
         return True
 
     async def close(self) -> None:
@@ -144,4 +152,5 @@ class InvestigationService:
             except asyncio.CancelledError:
                 if self.active_id:
                     self.finish(self.active_id, "cancelled", error="Backend stopped before inference began.")
+                    self.execution_slot.release(f'investigation:{self.active_id}')
                     self.active_id = None

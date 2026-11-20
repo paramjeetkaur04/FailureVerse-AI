@@ -22,6 +22,7 @@ async def ai_status(request: Request) -> dict:
         "ready": False, "state": "disabled", "detail": "Set FV_AI_ENABLED=true to enable local investigation.", "model": settings.ollama_model,
     }
     return {**provider, "enabled": settings.ai_enabled, "active_run_id": service.active_id,
+            "active_workflow_id": request.app.state.workflows.active_id,
             "limits": {"model_calls": MAX_MODEL_CALLS, "tool_calls": MAX_TOOL_CALLS, "deadline_seconds": DEADLINE_SECONDS},
             "targets": [{"id": "demo", "name": "FailureVerse demo test container"}]}
 

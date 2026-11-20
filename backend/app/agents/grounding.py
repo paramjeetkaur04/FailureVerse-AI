@@ -6,7 +6,7 @@ references; free-form generated claims, numbers and confirmed causes are not acc
 
 from dataclasses import dataclass, field
 
-from app.agents.metrics import memory_values
+from app.agents.metrics import at_memory_review_threshold, memory_values
 from app.agents.schemas import Finding, InvestigationReport, ReportSelection
 
 
@@ -72,7 +72,7 @@ def build_catalog(evidence: list[dict]) -> Catalog:
                 catalog.add("observations", f"Recorded memory usage was {usage:.2f} MiB.", item, ["memory_usage_bytes"])
             if percent is not None:
                 catalog.add("observations", f"Memory usage was {percent:.2f}% of the {limit:.2f} MiB recorded limit.", item, ["memory_usage_bytes", "memory_limit_bytes"])
-                if percent >= 90:
+                if at_memory_review_threshold(data):
                     catalog.add("hypotheses", "Memory pressure may be relevant at this snapshot; a memory leak has not been established.", item, ["memory_usage_bytes", "memory_limit_bytes"])
                     catalog.add("recommendations", "Collect another bounded memory sample and review workload before attributing the high utilization to a leak.", item, ["memory_usage_bytes", "memory_limit_bytes"])
             else:
@@ -129,7 +129,7 @@ def build_catalog(evidence: list[dict]) -> Catalog:
             signal = f"failed_probe_{data.get('service')}"
         elif tool == "container_stats" and "data.memory_limit_bytes" in fields:
             percent = memory_values(data)["memory_usage_percent"]
-            if percent is not None and percent >= 90:
+            if percent is not None and at_memory_review_threshold(data):
                 signal = "high_memory"
         if signal and signal not in seen_signals:
             seen_signals.add(signal)

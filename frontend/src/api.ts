@@ -78,6 +78,7 @@ export type RunSummary = Pick<Investigation, 'id' | 'question' | 'status' | 'mod
 export type AgentStatus = {
   ready: boolean; enabled: boolean; state: string; detail: string; model: string;
   active_run_id: string | null; limits: Investigation['limits'];
+  active_workflow_id?: string | null;
   targets: { id: string; name: string }[];
 };
 export const investigationApi = {
@@ -86,4 +87,32 @@ export const investigationApi = {
   get: (id: string) => request<Investigation>(`/investigations/${encodeURIComponent(id)}`),
   start: (question: string) => request<Investigation>('/investigations', { method: 'POST', body: JSON.stringify({ target: 'demo', question }) }),
   cancel: (id: string) => request<Investigation>(`/investigations/${encodeURIComponent(id)}/cancel`, { method: 'POST' }),
+};
+
+export type WorkflowRole = 'monitoring' | 'investigation' | 'simulation' | 'risk' | 'recovery';
+export type Proposal = Finding & { action: string; execution_enabled: false };
+export type SpecialistResult = { role: WorkflowRole; method: 'ollama_catalog_selection' | 'deterministic_policy'; items: Proposal[]; execution_enabled: false; plan_hash: string | null };
+export type WorkflowCheckpoint = {
+  version: 1; next_stage: WorkflowRole | 'done'; model_calls: number; tool_calls: number;
+  role_models: Partial<Record<WorkflowRole, number>>; role_tools: Partial<Record<WorkflowRole, number>>;
+  evidence: Evidence[]; investigation_evidence: Evidence[];
+  monitoring: { state: string; signals: (Finding & { kind: string; severity: string })[]; missing: string[]; evidence_ids: string[] } | null;
+  investigation: Report | null; specialists: Partial<Record<WorkflowRole, SpecialistResult>>;
+  outcome: 'observed_healthy' | 'awaiting_review' | 'insufficient_evidence' | null;
+};
+export type AgentWorkflow = {
+  id: string; target: 'demo'; question: string; investigate_healthy: boolean; model: string; status: string;
+  created_at: string; expires_at: string; finished_at: string | null;
+  checkpoint: WorkflowCheckpoint; events: (Investigation['events'][number] & { role: WorkflowRole; next_stage?: string })[];
+  error: string | null; resumable: boolean; execution_enabled: false; limits: Investigation['limits'];
+};
+export type WorkflowSummary = Pick<AgentWorkflow, 'id' | 'question' | 'status' | 'created_at'> & { next_stage: string; model_calls: number; tool_calls: number };
+export const workflowApi = {
+  list: () => request<WorkflowSummary[]>('/workflows'),
+  get: (id: string) => request<AgentWorkflow>(`/workflows/${encodeURIComponent(id)}`),
+  start: (question: string, investigateHealthy: boolean) => request<AgentWorkflow>('/workflows', {
+    method: 'POST', body: JSON.stringify({ target: 'demo', question, investigate_healthy: investigateHealthy }),
+  }),
+  cancel: (id: string) => request<AgentWorkflow>(`/workflows/${encodeURIComponent(id)}/cancel`, { method: 'POST' }),
+  resume: (id: string) => request<AgentWorkflow>(`/workflows/${encodeURIComponent(id)}/resume`, { method: 'POST' }),
 };

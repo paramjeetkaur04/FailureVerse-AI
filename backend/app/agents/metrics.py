@@ -37,3 +37,9 @@ def memory_values(data: dict) -> dict:
     if usage <= limit:
         result["memory_usage_percent"] = float((Decimal(100) * usage / limit).quantize(Decimal("0.01")))
     return result
+
+
+def at_memory_review_threshold(data: dict) -> bool:
+    """Compare raw integer counters; display rounding must not trigger the policy."""
+    return (memory_values(data)['memory_usage_percent'] is not None
+        and data['memory_usage_bytes'] * 100 >= data['memory_limit_bytes'] * 90)

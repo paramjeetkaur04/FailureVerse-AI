@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+from app.core.version import PHASE
 
 
 class ServiceObservation(BaseModel):
@@ -30,12 +31,12 @@ class ReadinessResponse(BaseModel):
     status: Literal["healthy", "unavailable"]
     version: str
     database: Literal["connected", "unavailable"]
-    phase: int = 2
+    phase: int = PHASE
 
 
 class OverviewResponse(BaseModel):
     project: str = "FailureVerse AI"
-    phase: int = 2
+    phase: int = PHASE
     environment: str
     healthy_services: int
     total_services: int
@@ -54,4 +55,4 @@ class PublicConfig(BaseModel):
     ollama_model: str
     ai_enabled: bool = False
     docker_control_enabled: bool = False
-    phase: int = 2
+    phase: int = PHASE

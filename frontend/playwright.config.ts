@@ -15,13 +15,13 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
   timeout: 45_000,
-  globalTimeout: 12 * 60_000,
+  globalTimeout: 20 * 60_000,
   expect: { timeout: 12_000 },
   outputDir: process.env.FV_E2E_LIVE_AI === '1'
-    ? '../artifacts/browser/live-test-results' : '../artifacts/browser/test-results',
+    ? '../artifacts/phase3/browser/live-test-results' : '../artifacts/phase3/browser/test-results',
   reporter: [['list'], ['json', {
     outputFile: process.env.FV_E2E_LIVE_AI === '1'
-      ? '../artifacts/browser/live-results.json' : '../artifacts/browser/results.json',
+      ? '../artifacts/phase3/browser/live-results.json' : '../artifacts/phase3/browser/results.json',
   }]],
   use: {
     baseURL,

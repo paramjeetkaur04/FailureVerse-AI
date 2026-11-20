@@ -11,7 +11,7 @@ def test_health_contract_and_security_headers(client):
     response = client.get("/api/health")
     assert response.status_code == 200
     assert response.json() == {
-        "status": "healthy", "version": "0.2.0", "database": "connected", "phase": 2,
+        "status": "healthy", "version": "0.3.0", "database": "connected", "phase": 3,
     }
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["cache-control"] == "no-store"
@@ -19,7 +19,7 @@ def test_health_contract_and_security_headers(client):
 
 def test_overview_reports_measured_services_and_no_ai_claims(client):
     body = client.get("/api/overview").json()
-    assert body["phase"] == 2
+    assert body["phase"] == 3
     assert body["healthy_services"] == body["total_services"] == 3
     assert body["saved_checks"] == 1
     assert body["latest"]["source"] == "startup"
@@ -116,7 +116,8 @@ def test_metrics_and_openapi_are_available(client):
     assert metrics.status_code == 200
     assert 'failureverse_http_requests_total{method="GET",route="/api/health",status="200"}' in metrics.text
     schema = client.get("/openapi.json").json()
-    assert set(schema["paths"]) == {"/api/health", "/api/overview", "/api/checks", "/api/config", "/api/ai/status", "/api/investigations", "/api/investigations/{run_id}", "/api/investigations/{run_id}/cancel"}
+    assert set(schema["paths"]) == {"/api/health", "/api/overview", "/api/checks", "/api/config", "/api/ai/status", "/api/investigations", "/api/investigations/{run_id}", "/api/investigations/{run_id}/cancel",
+        '/api/workflows', '/api/workflows/{run_id}', '/api/workflows/{run_id}/cancel', '/api/workflows/{run_id}/resume'}
     assert client.get("/docs").status_code == 200
     assert client.get("/does-not-exist").status_code == 404
 
