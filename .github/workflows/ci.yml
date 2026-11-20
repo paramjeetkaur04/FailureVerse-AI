@@ -65,9 +65,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Match the diagnostic broker to the host Docker socket group
+        run: echo "FV_DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)" >> "$GITHUB_ENV"
       - run: docker compose config --quiet
       - run: docker compose build
       - run: docker compose up --no-build --wait --wait-timeout 120
+      - name: Verify actual allowlisted Docker access before browser checks
+        run: curl --fail --silent --show-error http://127.0.0.1:8020/diagnostics/demo/inspect_container
       - run: python3 scripts/smoke.py --frontend http://127.0.0.1:8080
       - uses: actions/setup-node@v4
         with:

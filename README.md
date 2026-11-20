@@ -167,10 +167,12 @@ Settings use the `FV_` prefix and are validated at startup. The backend reads th
 | `FV_OLLAMA_MODEL` | `qwen3:0.6b`; installed tool-capable local model |
 | `FV_MODEL_TIMEOUT_SECONDS` | `120`; CPU inference allowance, within the 180-second overall run deadline |
 | `FV_DIAGNOSTICS_BASE_URL` | Native development: `http://127.0.0.1:8020`; Compose uses its internal broker |
-| `FV_DOCKER_GID` | Broker socket group; `0` for this Docker Desktop installation |
+| `FV_DOCKER_GID` | Broker socket group; `0` for this Docker Desktop installation. On Linux, match the host socket group as described below. |
 | `FV_CLOUD_API_KEY` | Reserved secret; optional, unused, never exposed by the API |
 
 The Configuration screen is read-only. Edit environment values and restart the backend to apply changes. Keep `.env`, database files, runtime caches, and credentials out of Git. PostgreSQL requires migrations and driver support in a later phase; changing the URL alone is not supported.
+
+On Linux, export `FV_DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)` before starting Compose. The diagnostic broker runs as a non-root user and needs the socket's actual group; Docker Desktop's group `0` is not a portable Linux default. CI derives this value from its runner and verifies an allowlisted container read before browser checks. Broker `/health` reports process liveness only and does not verify Docker access.
 
 ## API
 
